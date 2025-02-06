@@ -1,6 +1,7 @@
 package server
 
 import (
+	"device-api/internal/middleware"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -29,5 +30,11 @@ func NewRequestHandler() http.Handler {
 
 	serverConfig.HandleFunc("GET /ping", pingHandler)
 
-	return serverConfig
+	middlewareStack := middleware.StackMiddlewares(
+		middleware.LoggingMiddleware,
+		middleware.RecoveryMiddleware,
+	)
+
+	wrappedHandler := middlewareStack(serverConfig)
+	return wrappedHandler
 }
