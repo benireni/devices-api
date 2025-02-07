@@ -2,42 +2,18 @@ package server
 
 import (
 	"device-api/internal/middleware"
+	"device-api/internal/model"
+	"device-api/internal/service"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-type State string
-
-const (
-	AVAILABLE State = "available"
-	IN_USE    State = "in-use"
-	INACTIVE  State = "inactive"
-)
-
-type Device struct {
-	ID           uuid.UUID `json:"id"`
-	Name         string    `json:"name"`
-	Brand        string    `json:"brand"`
-	State        string    `json:"state"`
-	CreationTime time.Time `json:"creation_time"`
-}
-
-func isValidState(s string) bool {
-	switch strings.ToLower(s) {
-	case string(AVAILABLE), string(IN_USE), string(INACTIVE):
-		return true
-	default:
-		return false
-	}
-}
-
 // Temporary in-memory storage (later will be replaced with a pg integration)
-var devices = make(map[uuid.UUID]Device)
+var devices = make(map[uuid.UUID]model.Device)
 
 func ping(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
@@ -46,21 +22,21 @@ func ping(w http.ResponseWriter, r *http.Request) {
 }
 
 func createDevice(w http.ResponseWriter, r *http.Request) {
-	var device Device
+	var device model.Device
 	err := json.NewDecoder(r.Body).Decode(&device)
 	if err != nil {
 		http.Error(w, "Invalid device payload", http.StatusBadRequest)
 		return
 	}
 
-	if device.Name == "" || device.Brand == "" {
-		http.Error(w, "Name and brand are required", http.StatusBadRequest)
-		return
-	}
-
 	device.ID = uuid.New()
-	device.State = string(AVAILABLE)
+	device.State = string(model.AVAILABLE)
 	device.CreationTime = time.Now()
+
+	validationError := service.ValidateNewDevice(device)
+	if validationError != nil {
+		http.Error(w, validationError.Error(), http.StatusBadRequest)
+	}
 
 	// Save to DB - if it fails, drop a 5XX
 	devices[device.ID] = device
@@ -95,9 +71,10 @@ func fetchDevices(w http.ResponseWriter, r *http.Request) {
 	filterByBrand := targetBrand != ""
 
 	targetState := filters.Get("state")
-	filterByState := isValidState(targetState)
+	filterByState := service.IsValidState(targetState)
 
-	var targetDevices []Device
+	// DB can do it by itself
+	var targetDevices []model.Device
 	for _, device := range devices {
 		if (filterByBrand && device.Brand != targetBrand) ||
 			(filterByState && device.State != targetState) {
@@ -119,7 +96,7 @@ func partiallyUpdateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var updatedDevice Device
+	var updatedDevice model.Device
 	err = json.NewDecoder(r.Body).Decode(&updatedDevice)
 	if err != nil {
 		http.Error(w, "Invalid input", http.StatusBadRequest)
@@ -132,14 +109,10 @@ func partiallyUpdateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatingName := updatedDevice.Name != "" && updatedDevice.Name != device.Name
-	updatingBrand := updatedDevice.Brand != "" && updatedDevice.Brand != device.Brand
-
-	if device.State == string(IN_USE) {
-		if updatingName || updatingBrand {
-			http.Error(w, "Cannot update name or brand of a device currently in use", http.StatusBadRequest)
-			return
-		}
+	validationError := service.ValidateDeviceUpdate(updatedDevice, device)
+	if validationError != nil {
+		http.Error(w, validationError.Error(), http.StatusBadRequest)
+		return
 	}
 
 	if updatedDevice.Name != "" {
@@ -148,11 +121,6 @@ func partiallyUpdateDevice(w http.ResponseWriter, r *http.Request) {
 
 	if updatedDevice.Brand != "" {
 		device.Brand = updatedDevice.Brand
-	}
-
-	if updatedDevice.State != "" && !isValidState(updatedDevice.State) {
-		http.Error(w, "Invalid device state", http.StatusBadRequest)
-		return
 	}
 
 	device.State = updatedDevice.State
@@ -171,7 +139,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var updatedDevice Device
+	var updatedDevice model.Device
 	err = json.NewDecoder(r.Body).Decode(&updatedDevice)
 	if err != nil {
 		http.Error(w, "Invalid input", http.StatusBadRequest)
@@ -184,18 +152,9 @@ func updateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatingName := updatedDevice.Name != "" && updatedDevice.Name != device.Name
-	updatingBrand := updatedDevice.Brand != "" && updatedDevice.Brand != device.Brand
-
-	if device.State == string(IN_USE) {
-		if updatingName || updatingBrand {
-			http.Error(w, "Cannot update name or brand of a device currently in use", http.StatusBadRequest)
-			return
-		}
-	}
-
-	if !isValidState(updatedDevice.State) {
-		http.Error(w, "Invalid device state", http.StatusBadRequest)
+	validationError := service.ValidateDeviceUpdate(updatedDevice, device)
+	if validationError != nil {
+		http.Error(w, validationError.Error(), http.StatusBadRequest)
 		return
 	}
 
