@@ -54,3 +54,4 @@ make clean
 - I'm uploading the env file to the git repository to make the project run easier. I believe a good approach would be to access this data through a third-party such as AWS Parameter Store - secure, easy implementation and maintenance (but with an extra network hit in the system's bootstrap).
 - The docker image I used for Golang is **golang:1.23-alpine**, as requested in the document.
 - One can check the server's helath through /ping
+- Using brand and state as filters comprehends the challenge's requirements and also makes it possible to search for both the brand and the state.
