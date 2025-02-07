@@ -1,7 +1,6 @@
 package server
 
 import (
-	"device-api/internal/database"
 	"device-api/internal/model"
 	"device-api/internal/service"
 	"encoding/json"
@@ -13,11 +12,11 @@ import (
 )
 
 type Server struct {
-	Database database.Service
+	Database model.DeviceDAO
 	Mux      *http.ServeMux
 }
 
-func NewServer(db database.Service) *Server {
+func NewServer(db model.DeviceDAO) *Server {
 	server := &Server{
 		Database: db,
 		Mux:      http.NewServeMux(),

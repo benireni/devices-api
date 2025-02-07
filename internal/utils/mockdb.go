@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"device-api/internal/database"
 	"device-api/internal/model"
 	"fmt"
 	"sync"
@@ -14,7 +13,7 @@ type mockDB struct {
 	mu      sync.RWMutex
 }
 
-func NewMockDB() database.Service {
+func NewMockDB() model.DeviceDAO {
 	return &mockDB{
 		devices: make(map[uuid.UUID]model.Device),
 	}

@@ -14,32 +14,22 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 )
 
-type Service interface {
-	Health() map[string]string
-	Close() error
-	CreateDevice(device model.Device) (model.Device, error)
-	GetDeviceByID(id uuid.UUID) (*model.Device, error)
-	UpdateDevice(updatedDevice model.Device) (*model.Device, error)
-	DeleteDevice(id uuid.UUID) error
-	ListDevices(state, brand string) ([]*model.Device, error)
-}
-
 type postgresDB struct {
 	database *sql.DB
 }
 
 var (
-	database = os.Getenv("DB_DATABASE")
-	password = os.Getenv("DB_PASSWORD")
-	username = os.Getenv("DB_USERNAME")
-	port     = os.Getenv("DB_PORT")
-	host     = os.Getenv("DB_HOST")
-	schema   = os.Getenv("DB_SCHEMA")
+	databaseName = os.Getenv("DB_DATABASE")
+	password     = os.Getenv("DB_PASSWORD")
+	username     = os.Getenv("DB_USERNAME")
+	port         = os.Getenv("DB_PORT")
+	host         = os.Getenv("DB_HOST")
+	schema       = os.Getenv("DB_SCHEMA")
 )
 
-func NewPostgresDB() (Service, error) {
+func NewPostgresDB() (model.DeviceDAO, error) {
 	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s",
-		username, password, host, port, database, schema)
+		username, password, host, port, databaseName, schema)
 
 	database, err := sql.Open("pgx", connStr)
 	if err != nil {

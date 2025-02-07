@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func setupTest() database.Service {
+func setupTest() database.DeviceDAO {
 	return utils.NewMockDB()
 }
 
