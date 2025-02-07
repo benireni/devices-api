@@ -2,7 +2,6 @@ package server_test
 
 import (
 	"bytes"
-	"device-api/internal/database"
 	"device-api/internal/model"
 	"device-api/internal/server"
 	"device-api/internal/utils"
@@ -18,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func setupTest() database.DeviceDAO {
+func setupTest() model.DeviceDAO {
 	return utils.NewMockDB()
 }
 
