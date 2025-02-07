@@ -8,6 +8,7 @@ just ask for docker/postman downloading
 talk about golang versioning (using alpine 1.23 go)
 
 ## Running the Project
+Before running any commands, make sure your docker engine is running
 
 Run build and tests
 ```bash

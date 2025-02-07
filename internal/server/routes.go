@@ -152,6 +152,11 @@ func updateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if updatedDevice == (model.Device{}) {
+		http.Error(w, "Request body is empty", http.StatusBadRequest)
+		return
+	}
+
 	device, exists := devices[deviceID]
 	if !exists {
 		http.Error(w, "Device not found", http.StatusNotFound)
