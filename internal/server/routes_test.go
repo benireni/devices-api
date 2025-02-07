@@ -203,7 +203,7 @@ func TestFetchDevicesHandler(t *testing.T) {
 	}
 }
 
-func TestPartiallyUpdateDeviceRoute(t *testing.T) {
+func TestUpdateDeviceRoute(t *testing.T) {
 	setupTest(t)
 	handler := NewRequestHandler()
 
@@ -256,7 +256,7 @@ func TestPartiallyUpdateDeviceRoute(t *testing.T) {
 			true,
 		},
 		{
-			"Partially update everything",
+			"Fully update device (PUT-alike)",
 			baseDevice.ID.String(),
 			`{"name":"updated device name", "brand": "updated device brand", "state":"in-use"}`,
 			http.StatusOK,
@@ -326,134 +326,6 @@ func TestPartiallyUpdateDeviceRoute(t *testing.T) {
 				assert.NoError(t, err)
 
 				assert.Equal(t, baseDevice.CreatedAt.UTC(), updatedDevice.CreatedAt.UTC())
-
-				assert.Equal(t, tc.expectedName, updatedDevice.Name)
-				assert.Equal(t, tc.expectedBrand, updatedDevice.Brand)
-				assert.Equal(t, tc.expectedState, updatedDevice.State)
-			}
-		})
-	}
-}
-
-func TestUpdateDeviceHandler(t *testing.T) {
-	setupTest(t)
-	handler := NewRequestHandler()
-
-	baseDevice := model.Device{
-		ID:        uuid.New(),
-		Name:      "Some Device",
-		Brand:     "Brandy Brand",
-		State:     "available",
-		CreatedAt: time.Now(),
-	}
-
-	tests := []struct {
-		name           string
-		deviceID       string
-		payload        string
-		expectedStatus int
-		expectedName   string
-		expectedBrand  string
-		expectedState  string
-		checkCreatedAt bool
-	}{
-		{
-			"Full update of device name",
-			baseDevice.ID.String(),
-			`{"name":"updated device name", "brand":"Brandy Brand", "state":"available"}`,
-			http.StatusOK,
-			"updated device name",
-			"Brandy Brand",
-			"available",
-			true,
-		},
-		{
-			"Full update of device brand",
-			baseDevice.ID.String(),
-			`{"name":"Some Device", "brand":"updated device brand", "state":"available"}`,
-			http.StatusOK,
-			"Some Device",
-			"updated device brand",
-			"available",
-			true,
-		},
-		{
-			"Full update of device state",
-			baseDevice.ID.String(),
-			`{"name":"Some Device", "brand":"Brandy Brand", "state":"in-use"}`,
-			http.StatusOK,
-			"Some Device",
-			"Brandy Brand",
-			"in-use",
-			true,
-		},
-		{
-			"Full update of all attributes",
-			baseDevice.ID.String(),
-			`{"name":"updated device name", "brand":"updated device brand", "state":"in-use"}`,
-			http.StatusOK,
-			"updated device name",
-			"updated device brand",
-			"in-use",
-			true,
-		},
-		{
-			"Invalid device UUID",
-			"invalid-uuid",
-			`{"name":"NewDeviceName", "brand":"NewBrand", "state":"available"}`,
-			http.StatusBadRequest,
-			"", "", "", false,
-		},
-		{
-			"Non-existent device",
-			uuid.NewString(),
-			`{"name":"NewDeviceName", "brand":"NewBrand", "state":"available"}`,
-			http.StatusNotFound,
-			"", "", "", false,
-		},
-		{
-			"Cannot update device with invalid state",
-			baseDevice.ID.String(),
-			`{"name":"Some Device", "brand":"Brandy Brand", "state":"invalid-state"}`,
-			http.StatusBadRequest,
-			"", "", "", false,
-		},
-		{
-			"Cannot update with empty payload",
-			baseDevice.ID.String(),
-			`{}`,
-			http.StatusBadRequest,
-			"", "", "", false,
-		},
-		{
-			"Invalid update payload JSON",
-			baseDevice.ID.String(),
-			`{"name":}`,
-			http.StatusBadRequest,
-			"", "", "", false,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			setupTest(t)
-			devices[baseDevice.ID] = baseDevice
-
-			req := httptest.NewRequest("PUT", fmt.Sprintf("/devices/%s", tc.deviceID), strings.NewReader(tc.payload))
-			w := httptest.NewRecorder()
-
-			handler.ServeHTTP(w, req)
-
-			assert.Equal(t, tc.expectedStatus, w.Code)
-
-			if tc.expectedStatus == http.StatusOK {
-				var updatedDevice model.Device
-				err := json.Unmarshal(w.Body.Bytes(), &updatedDevice)
-				assert.NoError(t, err)
-
-				if tc.checkCreatedAt {
-					assert.Equal(t, baseDevice.CreatedAt.UTC(), updatedDevice.CreatedAt.UTC())
-				}
 
 				assert.Equal(t, tc.expectedName, updatedDevice.Name)
 				assert.Equal(t, tc.expectedBrand, updatedDevice.Brand)

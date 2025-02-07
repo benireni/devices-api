@@ -86,7 +86,7 @@ func fetchDevices(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(targetDevices)
 }
 
-func partiallyUpdateDevice(w http.ResponseWriter, r *http.Request) {
+func updateDevice(w http.ResponseWriter, r *http.Request) {
 	rawDeviceID := r.PathValue("id")
 	deviceID, err := uuid.Parse(rawDeviceID)
 	if err != nil {
@@ -124,51 +124,6 @@ func partiallyUpdateDevice(w http.ResponseWriter, r *http.Request) {
 	if updatedDevice.State != "" {
 		device.State = updatedDevice.State
 	}
-
-	updatedPayload, err := devicesDB.UpdateDevice(*device)
-	if err != nil {
-		http.Error(w, "Failed to update device", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(updatedPayload)
-}
-
-func updateDevice(w http.ResponseWriter, r *http.Request) {
-	rawDeviceID := r.PathValue("id")
-	deviceID, err := uuid.Parse(rawDeviceID)
-	if err != nil {
-		http.Error(w, "Invalid device ID", http.StatusBadRequest)
-		return
-	}
-
-	var updatedDevice model.Device
-	err = json.NewDecoder(r.Body).Decode(&updatedDevice)
-	if err != nil {
-		http.Error(w, "Invalid input", http.StatusBadRequest)
-		return
-	}
-
-	if updatedDevice == (model.Device{}) {
-		http.Error(w, "Request body is empty", http.StatusBadRequest)
-		return
-	}
-
-	device, err := devicesDB.GetDeviceByID(deviceID)
-	if err != nil {
-		http.Error(w, "Device not found", http.StatusNotFound)
-		return
-	}
-
-	validationError := service.ValidateDeviceUpdate(updatedDevice, *device)
-	if validationError != nil {
-		http.Error(w, validationError.Error(), http.StatusBadRequest)
-		return
-	}
-
-	updatedDevice.ID = device.ID
-	updatedDevice.CreatedAt = device.CreatedAt
 
 	updatedPayload, err := devicesDB.UpdateDevice(*device)
 	if err != nil {
@@ -218,8 +173,7 @@ func NewRequestHandler() http.Handler {
 	serverConfig.HandleFunc("GET /devices/{id}", fetchDevice)
 	serverConfig.HandleFunc("GET /devices", fetchDevices)
 
-	serverConfig.HandleFunc("PATCH /devices/{id}", partiallyUpdateDevice)
-	serverConfig.HandleFunc("PUT /devices/{id}", updateDevice)
+	serverConfig.HandleFunc("PATCH /devices/{id}", updateDevice)
 
 	serverConfig.HandleFunc("DELETE /devices/{id}", deleteDevice)
 
