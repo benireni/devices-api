@@ -17,11 +17,12 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_SCHEMA: ${DB_SCHEMA}
     depends_on:
-      psql_bp:
+      psql_devices:
         condition: service_healthy
     networks:
-      - blueprint
-  psql_bp:
+      - devices_api
+
+  psql_devices:
     image: postgres:latest
     restart: unless-stopped
     environment:
@@ -39,9 +40,11 @@ services:
       retries: 3
       start_period: 15s
     networks:
-      - blueprint
+      - devices_api
 
 volumes:
   psql_volume_bp:
+
 networks:
-  blueprint:
+  devices_api:
+    driver: bridge

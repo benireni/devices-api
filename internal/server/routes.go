@@ -1,19 +1,18 @@
 package server
 
 import (
+	"device-api/internal/database"
 	"device-api/internal/middleware"
 	"device-api/internal/model"
 	"device-api/internal/service"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-// Temporary in-memory storage (later will be replaced with a pg integration)
-var devices = make(map[uuid.UUID]model.Device)
+var devicesDB = database.New()
 
 func ping(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
@@ -31,19 +30,21 @@ func createDevice(w http.ResponseWriter, r *http.Request) {
 
 	device.ID = uuid.New()
 	device.State = string(model.AVAILABLE)
-	device.CreationTime = time.Now()
+	device.CreatedAt = time.Now()
 
 	validationError := service.ValidateNewDevice(device)
 	if validationError != nil {
 		http.Error(w, validationError.Error(), http.StatusBadRequest)
 	}
 
-	// Save to DB - if it fails, drop a 5XX
-	devices[device.ID] = device
-	fmt.Printf("%+v\n", devices)
+	createdDevice, err := devicesDB.CreateDevice(device)
+	if err != nil {
+		http.Error(w, "Failed to create device", http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(device)
+	json.NewEncoder(w).Encode(createdDevice)
 }
 
 func fetchDevice(w http.ResponseWriter, r *http.Request) {
@@ -54,8 +55,8 @@ func fetchDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	device, exists := devices[deviceID]
-	if !exists {
+	device, err := devicesDB.GetDeviceByID(deviceID)
+	if err != nil {
 		http.Error(w, "Device not found", http.StatusNotFound)
 		return
 	}
@@ -68,24 +69,17 @@ func fetchDevices(w http.ResponseWriter, r *http.Request) {
 	filters := r.URL.Query()
 
 	targetBrand := filters.Get("brand")
-	filterByBrand := targetBrand != ""
-
 	targetState := filters.Get("state")
-	filterByState := targetState != ""
-	if filterByState && !service.IsValidState(targetState) {
+
+	if targetState != "" && !service.IsValidState(targetState) {
 		http.Error(w, "Invalid device state", http.StatusBadRequest)
 		return
 	}
 
-	// DB can do it by itself
-	var targetDevices []model.Device
-	for _, device := range devices {
-		if (filterByBrand && device.Brand != targetBrand) ||
-			(filterByState && device.State != targetState) {
-			continue
-		}
-
-		targetDevices = append(targetDevices, device)
+	targetDevices, err := devicesDB.ListDevices(targetState, targetBrand)
+	if err != nil {
+		http.Error(w, "Failed to fetch devices", http.StatusInternalServerError)
+		return
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -107,13 +101,13 @@ func partiallyUpdateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	device, exists := devices[deviceID]
-	if !exists {
+	device, err := devicesDB.GetDeviceByID(deviceID)
+	if err != nil {
 		http.Error(w, "Device not found", http.StatusNotFound)
 		return
 	}
 
-	validationError := service.ValidateDeviceUpdate(updatedDevice, device)
+	validationError := service.ValidateDeviceUpdate(updatedDevice, *device)
 	if validationError != nil {
 		http.Error(w, validationError.Error(), http.StatusBadRequest)
 		return
@@ -131,10 +125,14 @@ func partiallyUpdateDevice(w http.ResponseWriter, r *http.Request) {
 		device.State = updatedDevice.State
 	}
 
-	devices[deviceID] = device
+	updatedPayload, err := devicesDB.UpdateDevice(*device)
+	if err != nil {
+		http.Error(w, "Failed to update device", http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(device)
+	json.NewEncoder(w).Encode(updatedPayload)
 }
 
 func updateDevice(w http.ResponseWriter, r *http.Request) {
@@ -157,25 +155,29 @@ func updateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	device, exists := devices[deviceID]
-	if !exists {
+	device, err := devicesDB.GetDeviceByID(deviceID)
+	if err != nil {
 		http.Error(w, "Device not found", http.StatusNotFound)
 		return
 	}
 
-	validationError := service.ValidateDeviceUpdate(updatedDevice, device)
+	validationError := service.ValidateDeviceUpdate(updatedDevice, *device)
 	if validationError != nil {
 		http.Error(w, validationError.Error(), http.StatusBadRequest)
 		return
 	}
 
 	updatedDevice.ID = device.ID
-	updatedDevice.CreationTime = device.CreationTime
+	updatedDevice.CreatedAt = device.CreatedAt
 
-	devices[deviceID] = updatedDevice
+	updatedPayload, err := devicesDB.UpdateDevice(*device)
+	if err != nil {
+		http.Error(w, "Failed to update device", http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(updatedDevice)
+	json.NewEncoder(w).Encode(updatedPayload)
 }
 
 func deleteDevice(w http.ResponseWriter, r *http.Request) {
@@ -186,8 +188,8 @@ func deleteDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	device, exists := devices[deviceID]
-	if !exists {
+	device, err := devicesDB.GetDeviceByID(deviceID)
+	if err != nil {
 		http.Error(w, "Device not found", http.StatusNotFound)
 		return
 	}
@@ -197,7 +199,11 @@ func deleteDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	delete(devices, deviceID)
+	err = devicesDB.DeleteDevice(deviceID)
+	if err != nil {
+		http.Error(w, "Failed to delete device", http.StatusInternalServerError)
+		return
+	}
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -220,7 +226,6 @@ func NewRequestHandler() http.Handler {
 	middlewareStack := middleware.StackMiddlewares(
 		middleware.LoggingMiddleware,
 		middleware.RecoveryMiddleware,
-		middleware.VersioningMiddleware,
 	)
 
 	wrappedHandler := middlewareStack(serverConfig)

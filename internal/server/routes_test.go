@@ -15,6 +15,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var devices map[uuid.UUID]model.Device
+
 func setupTest(t *testing.T) {
 	devices = make(map[uuid.UUID]model.Device)
 	t.Cleanup(func() { devices = make(map[uuid.UUID]model.Device) })
@@ -44,11 +46,11 @@ func TestFetchDeviceHandler(t *testing.T) {
 	handler := NewRequestHandler()
 
 	existingDevice := model.Device{
-		ID:           uuid.New(),
-		Name:         "Some Device",
-		Brand:        "Some Brand",
-		State:        string(model.AVAILABLE),
-		CreationTime: time.Now(),
+		ID:        uuid.New(),
+		Name:      "Some Device",
+		Brand:     "Some Brand",
+		State:     string(model.AVAILABLE),
+		CreatedAt: time.Now(),
 	}
 	devices[existingDevice.ID] = existingDevice
 
@@ -206,22 +208,22 @@ func TestPartiallyUpdateDeviceRoute(t *testing.T) {
 	handler := NewRequestHandler()
 
 	baseDevice := model.Device{
-		ID:           uuid.New(),
-		Name:         "Some Device",
-		Brand:        "Brandy Brand",
-		State:        "AVAILABLE",
-		CreationTime: time.Now(),
+		ID:        uuid.New(),
+		Name:      "Some Device",
+		Brand:     "Brandy Brand",
+		State:     "AVAILABLE",
+		CreatedAt: time.Now(),
 	}
 
 	tests := []struct {
-		name              string
-		deviceID          string
-		payload           string
-		expectedStatus    int
-		expectedName      string
-		expectedBrand     string
-		expectedState     string
-		checkCreationTime bool
+		name           string
+		deviceID       string
+		payload        string
+		expectedStatus int
+		expectedName   string
+		expectedBrand  string
+		expectedState  string
+		checkCreatedAt bool
 	}{
 		{
 			"Partially update device name",
@@ -323,7 +325,7 @@ func TestPartiallyUpdateDeviceRoute(t *testing.T) {
 				err := json.Unmarshal(w.Body.Bytes(), &updatedDevice)
 				assert.NoError(t, err)
 
-				assert.Equal(t, baseDevice.CreationTime.UTC(), updatedDevice.CreationTime.UTC())
+				assert.Equal(t, baseDevice.CreatedAt.UTC(), updatedDevice.CreatedAt.UTC())
 
 				assert.Equal(t, tc.expectedName, updatedDevice.Name)
 				assert.Equal(t, tc.expectedBrand, updatedDevice.Brand)
@@ -338,22 +340,22 @@ func TestUpdateDeviceHandler(t *testing.T) {
 	handler := NewRequestHandler()
 
 	baseDevice := model.Device{
-		ID:           uuid.New(),
-		Name:         "Some Device",
-		Brand:        "Brandy Brand",
-		State:        "available",
-		CreationTime: time.Now(),
+		ID:        uuid.New(),
+		Name:      "Some Device",
+		Brand:     "Brandy Brand",
+		State:     "available",
+		CreatedAt: time.Now(),
 	}
 
 	tests := []struct {
-		name              string
-		deviceID          string
-		payload           string
-		expectedStatus    int
-		expectedName      string
-		expectedBrand     string
-		expectedState     string
-		checkCreationTime bool
+		name           string
+		deviceID       string
+		payload        string
+		expectedStatus int
+		expectedName   string
+		expectedBrand  string
+		expectedState  string
+		checkCreatedAt bool
 	}{
 		{
 			"Full update of device name",
@@ -449,8 +451,8 @@ func TestUpdateDeviceHandler(t *testing.T) {
 				err := json.Unmarshal(w.Body.Bytes(), &updatedDevice)
 				assert.NoError(t, err)
 
-				if tc.checkCreationTime {
-					assert.Equal(t, baseDevice.CreationTime.UTC(), updatedDevice.CreationTime.UTC())
+				if tc.checkCreatedAt {
+					assert.Equal(t, baseDevice.CreatedAt.UTC(), updatedDevice.CreatedAt.UTC())
 				}
 
 				assert.Equal(t, tc.expectedName, updatedDevice.Name)

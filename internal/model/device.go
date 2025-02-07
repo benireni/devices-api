@@ -7,9 +7,9 @@ import (
 )
 
 type Device struct {
-	ID           uuid.UUID `json:"id"`
-	Name         string    `json:"name"`
-	Brand        string    `json:"brand"`
-	State        string    `json:"state"`
-	CreationTime time.Time `json:"creation_time"`
+	ID        uuid.UUID `json:"id"`
+	Name      string    `json:"name"`
+	Brand     string    `json:"brand"`
+	State     string    `json:"state"`
+	CreatedAt time.Time `json:"created_at"`
 }
