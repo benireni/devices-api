@@ -175,9 +175,14 @@ func deleteDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, exists := devices[deviceID]
+	device, exists := devices[deviceID]
 	if !exists {
 		http.Error(w, "Device not found", http.StatusNotFound)
+		return
+	}
+
+	if device.State == string(model.IN_USE) {
+		http.Error(w, "Cannot delete a device currently in use", http.StatusBadRequest)
 		return
 	}
 
