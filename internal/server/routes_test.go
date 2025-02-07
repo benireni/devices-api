@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"device-api/internal/model"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -195,6 +196,127 @@ func TestFetchDevicesRoute(t *testing.T) {
 			} else {
 				responseBody := strings.TrimSpace(w.Body.String())
 				assert.NotEmpty(t, responseBody, "Expected error message")
+			}
+		})
+	}
+}
+
+func TestPartiallyUpdateDeviceRoute(t *testing.T) {
+	setupTest(t)
+	handler := NewRequestHandler()
+
+	baseDevice := model.Device{
+		ID:           uuid.New(),
+		Name:         "Some Device",
+		Brand:        "Brandy Brand",
+		State:        "AVAILABLE",
+		CreationTime: time.Now(),
+	}
+
+	tests := []struct {
+		name              string
+		deviceID          string
+		payload           string
+		expectedStatus    int
+		checkCreationTime bool
+	}{
+		{
+			"Partially update device name",
+			baseDevice.ID.String(),
+			`{"name":"updated device name"}`,
+			http.StatusOK,
+			true,
+		},
+		{
+			"Partially update device brand",
+			baseDevice.ID.String(),
+			`{"brand":"updated device brand"}`,
+			http.StatusOK,
+			true,
+		},
+		{
+			"Partially update device state",
+			baseDevice.ID.String(),
+			`{"state":"in-use"}`,
+			http.StatusOK,
+			true,
+		},
+		{
+			"Partially update everything",
+			baseDevice.ID.String(),
+			`{"name":"updated device name", "brand": "updated device brand", "state":"in-use"}`,
+			http.StatusOK,
+			true,
+		},
+		{
+			"Cannot partially update device state to invalid value",
+			baseDevice.ID.String(),
+			`{"state":"INVALID_STATE"}`,
+			http.StatusBadRequest,
+			false,
+		},
+		{
+			"Invalid device UUID",
+			"invalid-uuid",
+			`{"name":"NewDeviceName"}`,
+			http.StatusBadRequest,
+			false,
+		},
+		{
+			"Non-existent device",
+			uuid.NewString(),
+			`{"name":"NewDeviceName"}`,
+			http.StatusNotFound,
+			false,
+		},
+		{
+			"Do nothing with no attributes update",
+			baseDevice.ID.String(),
+			`{}`,
+			http.StatusOK,
+			false,
+		},
+		{
+			"Invalid update payload JSON",
+			baseDevice.ID.String(),
+			`{"name":}`,
+			http.StatusBadRequest,
+			false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			setupTest(t)
+			devices[baseDevice.ID] = baseDevice
+
+			req := httptest.NewRequest("PATCH", fmt.Sprintf("/devices/%s", tc.deviceID), strings.NewReader(tc.payload))
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, req)
+
+			assert.Equal(t, tc.expectedStatus, w.Code)
+
+			if tc.expectedStatus == http.StatusOK {
+				var updatedDevice model.Device
+				err := json.Unmarshal(w.Body.Bytes(), &updatedDevice)
+				assert.NoError(t, err)
+
+				assert.Equal(t, baseDevice.CreationTime.UTC(), updatedDevice.CreationTime.UTC())
+
+				switch tc.payload {
+				case `{"name":"updated device name"}`:
+					assert.Equal(t, "updated device name", updatedDevice.Name)
+				case `{"brand":"updated device brand"}`:
+					assert.Equal(t, "updated device brand", updatedDevice.Brand)
+				case `{"state":"in-use"}`:
+					assert.Equal(t, "in-use", updatedDevice.State)
+				case `{"name":"updated device name", "brand": "updated device brand", "state":"in-use"}`:
+					assert.Equal(t, "updated device name", updatedDevice.Name)
+					assert.Equal(t, "updated device brand", updatedDevice.Brand)
+					assert.Equal(t, "in-use", updatedDevice.State)
+				}
+
 			}
 		})
 	}

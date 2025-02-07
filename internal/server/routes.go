@@ -127,7 +127,9 @@ func partiallyUpdateDevice(w http.ResponseWriter, r *http.Request) {
 		device.Brand = updatedDevice.Brand
 	}
 
-	device.State = updatedDevice.State
+	if updatedDevice.State != "" {
+		device.State = updatedDevice.State
+	}
 
 	devices[deviceID] = device
 
