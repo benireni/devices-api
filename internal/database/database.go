@@ -17,7 +17,6 @@ import (
 type Service interface {
 	Health() map[string]string
 	Close() error
-
 	CreateDevice(device model.Device) (model.Device, error)
 	GetDeviceByID(id uuid.UUID) (*model.Device, error)
 	UpdateDevice(updatedDevice model.Device) (*model.Device, error)
@@ -25,85 +24,78 @@ type Service interface {
 	ListDevices(state, brand string) ([]*model.Device, error)
 }
 
-type service struct {
-	db *sql.DB
+type postgresDB struct {
+	database *sql.DB
 }
 
 var (
-	database   = os.Getenv("DB_DATABASE")
-	password   = os.Getenv("DB_PASSWORD")
-	username   = os.Getenv("DB_USERNAME")
-	port       = os.Getenv("DB_PORT")
-	host       = os.Getenv("DB_HOST")
-	schema     = os.Getenv("DB_SCHEMA")
-	dbInstance *service
+	database = os.Getenv("DB_DATABASE")
+	password = os.Getenv("DB_PASSWORD")
+	username = os.Getenv("DB_USERNAME")
+	port     = os.Getenv("DB_PORT")
+	host     = os.Getenv("DB_HOST")
+	schema   = os.Getenv("DB_SCHEMA")
 )
 
-func New() Service {
-	if dbInstance != nil {
-		return dbInstance
-	}
+func NewPostgresDB() (Service, error) {
+	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s",
+		username, password, host, port, database, schema)
 
-	connStr := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable&search_path=%s", username, password, host, port, database, schema)
-	db, err := sql.Open("pgx", connStr)
+	database, err := sql.Open("pgx", connStr)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
-	dbInstance = &service{
-		db: db,
-	}
+	postgresDatabase := &postgresDB{database: database}
+	postgresDatabase.initializeSchema()
 
-	dbInstance.initializeSchema()
-	return dbInstance
+	log.Printf("Connected to database: %s", os.Getenv("DB_DATABASE"))
+
+	return postgresDatabase, nil
 }
 
-func (s *service) Health() map[string]string {
+func (p *postgresDB) Health() map[string]string {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
 	stats := make(map[string]string)
-
-	err := s.db.PingContext(ctx)
-	if err != nil {
-		stats["status"] = "down"
+	if err := p.database.PingContext(ctx); err != nil {
+		stats["status"] = "DOWN"
 		stats["error"] = fmt.Sprintf("db down: %v", err)
 		log.Fatalf("db down: %v", err)
 		return stats
 	}
 
-	stats["status"] = "up"
-	stats["message"] = "Healthy DB!"
+	stats["status"] = "UP"
+	stats["message"] = "healthy DB"
 
 	return stats
 }
 
-func (s *service) Close() error {
-	log.Printf("Disconnected from database: %s", database)
-	return s.db.Close()
+func (p *postgresDB) Close() error {
+	log.Printf("Disconnected from database: %s", os.Getenv("DB_DATABASE"))
+	return p.database.Close()
 }
 
-func (s *service) initializeSchema() {
-	query := `
-	CREATE TABLE IF NOT EXISTS devices (
+func (p *postgresDB) initializeSchema() {
+	query := `CREATE TABLE IF NOT EXISTS devices (
 		id UUID PRIMARY KEY,
 		name TEXT NOT NULL,
 		brand TEXT NOT NULL,
 		state TEXT NOT NULL,
 		created_at TIMESTAMP DEFAULT NOW()
-	);
-	`
-	_, err := s.db.Exec(query)
-	if err != nil {
+	);`
+
+	if _, err := p.database.Exec(query); err != nil {
 		log.Fatalf("Error initializing schema: %v", err)
 	}
 }
 
-func (s *service) CreateDevice(device model.Device) (model.Device, error) {
-	_, err := s.db.Exec(
+func (p *postgresDB) CreateDevice(device model.Device) (model.Device, error) {
+
+	_, err := p.database.Exec(
 		"INSERT INTO devices (id, name, brand, state, created_at) VALUES ($1, $2, $3, $4, $5)",
-		device.ID, device.Name, device.Brand, device.State, device.CreatedAt,
-	)
+		device.ID, device.Name, device.Brand, device.State, device.CreatedAt)
 	if err != nil {
 		return model.Device{}, fmt.Errorf("POSTGRES: failure inserting device: %w", err)
 	}
@@ -111,21 +103,30 @@ func (s *service) CreateDevice(device model.Device) (model.Device, error) {
 	return device, nil
 }
 
-func (s *service) GetDeviceByID(id uuid.UUID) (*model.Device, error) {
-	query := `SELECT id, name, brand, state, created_at FROM devices WHERE id = $1`
+func (p *postgresDB) GetDeviceByID(id uuid.UUID) (*model.Device, error) {
+	query := "SELECT id, name, brand, state, created_at FROM devices WHERE id = $1"
 	device := &model.Device{}
-	err := s.db.QueryRow(query, id).Scan(&device.ID, &device.Name, &device.Brand, &device.State, &device.CreatedAt)
-	if err != nil {
+
+	if err := p.database.QueryRow(
+		query, id,
+	).Scan(
+		&device.ID,
+		&device.Name,
+		&device.Brand,
+		&device.State,
+		&device.CreatedAt,
+	); err != nil {
 		return nil, fmt.Errorf("device not found: %v", err)
 	}
+
 	return device, nil
 }
 
-func (s *service) UpdateDevice(device model.Device) (*model.Device, error) {
-	query := `UPDATE devices SET name = $1, brand = $2, state = $3 WHERE id = $4 RETURNING id, name, brand, state, created_at`
+func (p *postgresDB) UpdateDevice(device model.Device) (*model.Device, error) {
+	query := "UPDATE devices SET name = $1, brand = $2, state = $3 WHERE id = $4 RETURNING id, name, brand, state, created_at"
 	updatedDevice := &model.Device{}
-	err := s.db.QueryRow(
-		query,
+
+	if err := p.database.QueryRow(query,
 		device.Name,
 		device.Brand,
 		device.State,
@@ -136,25 +137,24 @@ func (s *service) UpdateDevice(device model.Device) (*model.Device, error) {
 		&updatedDevice.Brand,
 		&updatedDevice.State,
 		&updatedDevice.CreatedAt,
-	)
-	if err != nil {
+	); err != nil {
 		return nil, fmt.Errorf("failed to update device: %v", err)
 	}
+
 	return updatedDevice, nil
 }
 
-func (s *service) DeleteDevice(id uuid.UUID) error {
-	query := `DELETE FROM devices WHERE id = $1`
-	_, err := s.db.Exec(query, id)
-	if err != nil {
+func (p *postgresDB) DeleteDevice(id uuid.UUID) error {
+	query := "DELETE FROM devices WHERE id = $1"
+	if _, err := p.database.Exec(query, id); err != nil {
 		return fmt.Errorf("failed to delete device: %v", err)
 	}
+
 	return nil
 }
 
-func (s *service) ListDevices(state, brand string) ([]*model.Device, error) {
-	query := `SELECT id, name, brand, state, created_at FROM devices WHERE 1=1`
-
+func (p *postgresDB) ListDevices(state, brand string) ([]*model.Device, error) {
+	query := "SELECT id, name, brand, state, created_at FROM devices WHERE 1=1"
 	var args []interface{}
 	argCount := 1
 
@@ -163,13 +163,14 @@ func (s *service) ListDevices(state, brand string) ([]*model.Device, error) {
 		args = append(args, state)
 		argCount++
 	}
+
 	if brand != "" {
 		query += fmt.Sprintf(" AND brand = $%d", argCount)
 		args = append(args, brand)
 		argCount++
 	}
 
-	rows, err := s.db.Query(query, args...)
+	rows, err := p.database.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list devices: %v", err)
 	}
@@ -178,13 +179,22 @@ func (s *service) ListDevices(state, brand string) ([]*model.Device, error) {
 	var devices []*model.Device
 	for rows.Next() {
 		device := &model.Device{}
-		if err := rows.Scan(&device.ID, &device.Name, &device.Brand, &device.State, &device.CreatedAt); err != nil {
+		if err := rows.Scan(
+			&device.ID,
+			&device.Name,
+			&device.Brand,
+			&device.State,
+			&device.CreatedAt,
+		); err != nil {
 			return nil, fmt.Errorf("failed to scan device: %v", err)
 		}
+
 		devices = append(devices, device)
 	}
+
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("failed to iterate devices: %v", err)
 	}
+
 	return devices, nil
 }
