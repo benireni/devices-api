@@ -27,7 +27,7 @@ type Device struct {
 	CreationTime time.Time `json:"creation_time"`
 }
 
-func isValidStatus(s string) bool {
+func isValidState(s string) bool {
 	switch strings.ToLower(s) {
 	case string(AVAILABLE), string(IN_USE), string(INACTIVE):
 		return true
@@ -83,14 +83,27 @@ func fetchDevice(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(device)
 }
 
-func fetchAllDevices(w http.ResponseWriter, r *http.Request) {
-	var allDevices []Device
+func fetchDevices(w http.ResponseWriter, r *http.Request) {
+	filters := r.URL.Query()
+
+	targetBrand := filters.Get("brand")
+	filterByBrand := targetBrand != ""
+
+	targetState := filters.Get("state")
+	filterByState := isValidState(targetState)
+
+	var targetDevices []Device
 	for _, device := range devices {
-		allDevices = append(allDevices, device)
+		if (filterByBrand && device.Brand != targetBrand) ||
+			(filterByState && device.State != targetState) {
+			continue
+		}
+
+		targetDevices = append(targetDevices, device)
 	}
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(allDevices)
+	json.NewEncoder(w).Encode(targetDevices)
 }
 
 func updateDevice(w http.ResponseWriter, r *http.Request) {
@@ -123,7 +136,7 @@ func updateDevice(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if isValidStatus(updatedDevice.State) {
+	if isValidState(updatedDevice.State) {
 		device.State = updatedDevice.State
 	}
 
@@ -160,7 +173,7 @@ func NewRequestHandler() http.Handler {
 	serverConfig.HandleFunc("POST /devices", createDevice)
 
 	serverConfig.HandleFunc("GET /devices/{id}", fetchDevice)
-	serverConfig.HandleFunc("GET /devices", fetchAllDevices)
+	serverConfig.HandleFunc("GET /devices", fetchDevices)
 
 	serverConfig.HandleFunc("PATCH /devices/{id}", updateDevice)
 
