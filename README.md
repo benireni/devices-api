@@ -56,3 +56,4 @@ make clean
 - One can check the server's helath through /ping
 - Using brand and state as filters comprehends the challenge's requirements and also makes it possible to search for both the brand and the state.
 - user unable to put empty strings in any field
+- api is versioned, so when we need to migrate or even just bump apis version we can do it without harming active users
