@@ -245,6 +245,7 @@ func NewRequestHandler() http.Handler {
 	middlewareStack := middleware.StackMiddlewares(
 		middleware.LoggingMiddleware,
 		middleware.RecoveryMiddleware,
+		middleware.VersioningMiddleware,
 	)
 
 	wrappedHandler := middlewareStack(serverConfig)
