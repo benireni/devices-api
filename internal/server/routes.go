@@ -53,6 +53,11 @@ func createDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if device.Name == "" || device.Brand == "" {
+		http.Error(w, "Name and brand are required", http.StatusBadRequest)
+		return
+	}
+
 	device.ID = uuid.New()
 	device.State = string(AVAILABLE)
 	device.CreationTime = time.Now()
@@ -106,6 +111,58 @@ func fetchDevices(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(targetDevices)
 }
 
+func partiallyUpdateDevice(w http.ResponseWriter, r *http.Request) {
+	rawDeviceID := r.PathValue("id")
+	deviceID, err := uuid.Parse(rawDeviceID)
+	if err != nil {
+		http.Error(w, "Invalid device ID", http.StatusBadRequest)
+		return
+	}
+
+	var updatedDevice Device
+	err = json.NewDecoder(r.Body).Decode(&updatedDevice)
+	if err != nil {
+		http.Error(w, "Invalid input", http.StatusBadRequest)
+		return
+	}
+
+	device, exists := devices[deviceID]
+	if !exists {
+		http.Error(w, "Device not found", http.StatusNotFound)
+		return
+	}
+
+	updatingName := updatedDevice.Name != "" && updatedDevice.Name != device.Name
+	updatingBrand := updatedDevice.Brand != "" && updatedDevice.Brand != device.Brand
+
+	if device.State == string(IN_USE) {
+		if updatingName || updatingBrand {
+			http.Error(w, "Cannot update name or brand of a device currently in use", http.StatusBadRequest)
+			return
+		}
+	}
+
+	if updatedDevice.Name != "" {
+		device.Name = updatedDevice.Name
+	}
+
+	if updatedDevice.Brand != "" {
+		device.Brand = updatedDevice.Brand
+	}
+
+	if updatedDevice.State != "" && !isValidState(updatedDevice.State) {
+		http.Error(w, "Invalid device state", http.StatusBadRequest)
+		return
+	}
+
+	device.State = updatedDevice.State
+
+	devices[deviceID] = device
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(device)
+}
+
 func updateDevice(w http.ResponseWriter, r *http.Request) {
 	rawDeviceID := r.PathValue("id")
 	deviceID, err := uuid.Parse(rawDeviceID)
@@ -127,23 +184,28 @@ func updateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if device.State != string(IN_USE) {
-		if updatedDevice.Name != "" {
-			device.Name = updatedDevice.Name
-		}
-		if updatedDevice.Brand != "" {
-			device.Brand = updatedDevice.Brand
+	updatingName := updatedDevice.Name != "" && updatedDevice.Name != device.Name
+	updatingBrand := updatedDevice.Brand != "" && updatedDevice.Brand != device.Brand
+
+	if device.State == string(IN_USE) {
+		if updatingName || updatingBrand {
+			http.Error(w, "Cannot update name or brand of a device currently in use", http.StatusBadRequest)
+			return
 		}
 	}
 
-	if isValidState(updatedDevice.State) {
-		device.State = updatedDevice.State
+	if !isValidState(updatedDevice.State) {
+		http.Error(w, "Invalid device state", http.StatusBadRequest)
+		return
 	}
 
-	devices[deviceID] = device
+	updatedDevice.ID = device.ID
+	updatedDevice.CreationTime = device.CreationTime
+
+	devices[deviceID] = updatedDevice
 
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(device)
+	json.NewEncoder(w).Encode(updatedDevice)
 }
 
 func deleteDevice(w http.ResponseWriter, r *http.Request) {
@@ -175,7 +237,8 @@ func NewRequestHandler() http.Handler {
 	serverConfig.HandleFunc("GET /devices/{id}", fetchDevice)
 	serverConfig.HandleFunc("GET /devices", fetchDevices)
 
-	serverConfig.HandleFunc("PATCH /devices/{id}", updateDevice)
+	serverConfig.HandleFunc("PATCH /devices/{id}", partiallyUpdateDevice)
+	serverConfig.HandleFunc("PUT /devices/{id}", updateDevice)
 
 	serverConfig.HandleFunc("DELETE /devices/{id}", deleteDevice)
 
