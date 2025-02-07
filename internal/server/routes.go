@@ -71,7 +71,11 @@ func fetchDevices(w http.ResponseWriter, r *http.Request) {
 	filterByBrand := targetBrand != ""
 
 	targetState := filters.Get("state")
-	filterByState := service.IsValidState(targetState)
+	filterByState := targetState != ""
+	if filterByState && !service.IsValidState(targetState) {
+		http.Error(w, "Invalid device state", http.StatusBadRequest)
+		return
+	}
 
 	// DB can do it by itself
 	var targetDevices []model.Device
