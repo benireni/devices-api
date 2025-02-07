@@ -1,34 +1,35 @@
 package server
 
 import (
-	"io"
+	"device-api/internal/model"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
 )
 
-func TestHandler(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(ping))
-	defer server.Close()
-	resp, err := http.Get(server.URL)
-	if err != nil {
-		t.Fatalf("error making request to server. Err: %v", err)
-	}
-	defer resp.Body.Close()
+func setupTest(t *testing.T) {
+	devices = make(map[uuid.UUID]model.Device)
+	t.Cleanup(func() { devices = make(map[uuid.UUID]model.Device) })
+}
 
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected status OK; got %v", resp.Status)
-	}
-	expected := "{\"message\":\"pong\"}"
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("error reading response body. Err: %v", err)
-	}
+func TestPingHandler(t *testing.T) {
+	setupTest(t)
 
-	responsePayload := strings.TrimSpace(string(body))
+	handler := NewRequestHandler()
 
-	if expected != responsePayload {
-		t.Errorf("expected response body to be %v; got %v", expected, responsePayload)
-	}
+	req := httptest.NewRequest("GET", "/ping", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	expected := `{"message":"pong"}`
+	responseBody := strings.TrimSpace(w.Body.String())
+
+	assert.JSONEq(t, expected, responseBody)
 }
