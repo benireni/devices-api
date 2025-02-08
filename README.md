@@ -155,17 +155,17 @@ The Device API is structured to promote modularity, scalability, and maintainabi
 
 - **Configuration**:
 
-  - **Environment Variables**: The application uses environment variables for configuration, such as database credentials. These are loaded from a `.env` file - even though the best approach facing a production environment would be to not store them in the microservice itself. A good alternative would be to store them in AWS Parameter Store.
+  - **Environment Variables**: The application uses environment variables for configuration, such as database credentials. These are loaded from a `.env` file - even though the best approach facing a production environment would be not to store them in the microservice itself. A good alternative would be to store them in AWS Parameter Store.
 
 - **Testing**:
 
-  - **Unit Tests**: Located alongside the respective packages, these tests validate individual components.
+  - **Router Tests**: Ensure all requests are being processed as expected.
 
-  - **Integration Tests**: Ensure that different parts of the application work together as expected, especially interactions with the database.
+  - **Validator Tests**: Ensure the defined validation constraints are met.
 
 - **Error Handling**:
 
-  - The application uses structured error handling to provide meaningful error messages and compatible HTTP status codes.
+  - The application uses structured error handling to provide meaningful messages and compatible HTTP status codes.
 
 - **Logging**:
 
