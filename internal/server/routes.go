@@ -4,7 +4,6 @@ import (
 	"device-api/internal/model"
 	"device-api/internal/service"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -32,6 +31,7 @@ func (s *Server) createDevice(w http.ResponseWriter, r *http.Request) {
 	validationError := service.ValidateNewDevice(device)
 	if validationError != nil {
 		http.Error(w, validationError.Error(), http.StatusBadRequest)
+		return
 	}
 
 	createdDevice, err := s.Database.CreateDevice(device)
@@ -85,15 +85,12 @@ func (s *Server) fetchDevices(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) updateDevice(w http.ResponseWriter, r *http.Request) {
 	rawDeviceID := r.PathValue("id")
-	fmt.Println("rawDeviceID", rawDeviceID)
 
 	deviceID, err := uuid.Parse(rawDeviceID)
 	if err != nil {
 		http.Error(w, "Invalid device ID", http.StatusBadRequest)
 		return
 	}
-
-	fmt.Println(deviceID)
 
 	var updatedDevice model.Device
 	err = json.NewDecoder(r.Body).Decode(&updatedDevice)
