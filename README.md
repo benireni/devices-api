@@ -180,5 +180,11 @@ Having the functional requirements in mind, I think it would be proper to index 
 ### API Versioning
 I would add a single more middleware to the API Server: a versioning one. It would use a `.env` attribute to determine the prefix of the endpoints URIs. It would ease a possible migration/version bump of the Devices API in the future, avoiding issues with active users.
 
+### More Tests!
+I would write the test cases for the Device DAO - aren't many, but there are some that would be valuable. I would also deeply test the `service` layer I mentioned before.
+
+### Metrics & Monitoring
+A Prometheus Scrapper would fit greatly here. We could export some relevant usage data and plor in Graphana dashboards, create alarms in slack channels, etc.
+
 
 *Thank you!*
