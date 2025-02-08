@@ -169,19 +169,19 @@ The Device API is structured to promote modularity, scalability, and maintainabi
 
   - Middleware is used to log incoming requests and errors, aiding in debugging and monitoring.
 
-## What would I do with more time
+## What would be the next steps if I had more time
 
 ### Improve project layer organization
 The first thing I would do with more time is certainly delegate almost all checks and business rules from the `routes.go` to the `service` layer. Doing this allows me to cut the connection between the server and the database, which DAO would only be accessible to `service`. Router->Service->Repository design, even taking a little more time, would make the project more maintainable and extensible - which are even more urgent if we are thinking about a long-term project with many involved engineers.
+
+### Missing Tests
+I would write the test cases for the `Device DAO` - aren't many, but there are some that would be valuable. This would cover the need of *integration tests* of this project. I would also deeply test the `service` layer I mentioned before.
 
 ### Database Indexes
 Having the functional requirements in mind, I think it would be proper to index `State` and `Brand` aiming to speed up our filtering for our Postgres database.
 
 ### API Versioning
 I would add a single more middleware to the API Server: a versioning one. It would use a `.env` attribute to determine the prefix of the endpoints URIs. It would ease a possible migration/version bump of the Devices API in the future, avoiding issues with active users.
-
-### More Tests!
-I would write the test cases for the Device DAO - aren't many, but there are some that would be valuable. I would also deeply test the `service` layer I mentioned before.
 
 ### Metrics & Monitoring
 A Prometheus Scrapper would fit greatly here. We could export some relevant usage data and plor in Graphana dashboards, create alarms in slack channels, etc.
