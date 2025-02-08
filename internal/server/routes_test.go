@@ -270,7 +270,6 @@ func TestUpdateDeviceRoute(t *testing.T) {
 				deviceID = uuid.New().String()
 			}
 			url := fmt.Sprintf("/devices/%s", deviceID)
-
 			req := httptest.NewRequest("PATCH", url, strings.NewReader(tc.payload))
 			w := httptest.NewRecorder()
 			handler.ServeHTTP(w, req)

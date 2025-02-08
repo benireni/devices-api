@@ -16,7 +16,7 @@ func main() {
 
 	deviceAPIServer := server.NewServer(deviceDatabase)
 
-	fmt.Println("Starting Device API server on :8080")
+	fmt.Println("Started Device API server on :8080")
 
 	serverError := http.ListenAndServe(":8080", deviceAPIServer)
 	if serverError != nil && serverError != http.ErrServerClosed {

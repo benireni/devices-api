@@ -21,7 +21,6 @@ func NewServer(db model.DeviceDAO) *Server {
 	server.RegisterRoutes()
 
 	server.Handler = middleware.StackMiddlewares(
-		middleware.VersioningMiddleware,
 		middleware.LoggingMiddleware,
 		middleware.RecoveryMiddleware,
 	)(server.Mux)

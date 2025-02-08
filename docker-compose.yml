@@ -9,7 +9,6 @@ services:
       - ${PORT}:${PORT}
     environment:
       APP_ENV: ${APP_ENV}
-      API_VERSION: ${API_VERSION}
       PORT: ${PORT}
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}

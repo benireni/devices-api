@@ -14,8 +14,6 @@ tmp/
 .vscode
 .idea
 
-.env
-
 main
 *templ.go
 
