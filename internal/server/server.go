@@ -1,6 +1,7 @@
 package server
 
 import (
+	"device-api/internal/middleware"
 	"device-api/internal/model"
 	"net/http"
 )
@@ -8,6 +9,7 @@ import (
 type Server struct {
 	Database model.DeviceDAO
 	Mux      *http.ServeMux
+	Handler  http.Handler
 }
 
 func NewServer(db model.DeviceDAO) *Server {
@@ -16,11 +18,18 @@ func NewServer(db model.DeviceDAO) *Server {
 		Mux:      http.NewServeMux(),
 	}
 
-	server.routes()
+	server.RegisterRoutes()
+
+	server.Handler = middleware.StackMiddlewares(
+		middleware.VersioningMiddleware,
+		middleware.LoggingMiddleware,
+		middleware.RecoveryMiddleware,
+	)(server.Mux)
+
 	return server
 }
 
-func (server *Server) routes() {
+func (server *Server) RegisterRoutes() {
 
 	server.Mux.HandleFunc("GET /ping", server.handlePing)
 
@@ -35,5 +44,5 @@ func (server *Server) routes() {
 }
 
 func (server *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	server.Mux.ServeHTTP(w, r)
+	server.Handler.ServeHTTP(w, r)
 }

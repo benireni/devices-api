@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -8,7 +10,8 @@ import (
 
 func VersioningMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		versionPrefix := os.Getenv("API_VERSION")
+		versionPrefix := fmt.Sprintf("/v%s", os.Getenv("API_VERSION"))
+		log.Default().Println(versionPrefix)
 		if !strings.HasPrefix(r.URL.Path, versionPrefix) {
 			http.NotFound(w, r)
 			return
