@@ -79,6 +79,10 @@ func (s *Server) fetchDevices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if targetDevices == nil {
+		targetDevices = []*model.Device{}
+	}
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(targetDevices)
 }
