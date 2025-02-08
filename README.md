@@ -16,10 +16,12 @@ Welcome to the Device API documentation. This will shortly guide you on building
 Before you begin, ensure you have the following installed:
 
 - **Docker**: [Download and install Docker](https://docs.docker.com/get-docker/)
-- **Postman**: [Download and install Postman](https://www.postman.com/downloads/)
+- **Postman** (Optional for API manual testing): [Download and install Postman](https://www.postman.com/downloads/)
 - **Golang**: The project uses Go 1.23 [Download and install Go](https://golang.org/dl/)
-
-Either **Postman** and **Golang** are optional: Postman is a good choice for manual API testing and Golang will only be necessary if you want to run any piece of code outside the containers, once they run Go 1.23 Alpine images.
+- **Make**:
+  - Linux: `sudo apt install make`
+  - MacOS: `brew install make`
+  - Windows: [Install Make](https://gnuwin32.sourceforge.net/packages/make.htm)
 
 *Ensure your Docker engine is running before executing any commands.*
 
