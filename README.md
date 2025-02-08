@@ -177,5 +177,8 @@ The first thing I would do with more time is certainly delegate almost all check
 ### Database Indexes
 Having the functional requirements in mind, I think it would be proper to index `State` and `Brand` aiming to speed up our filtering for our Postgres database.
 
+### API Versioning
+I would add a single more middleware to the API Server: a versioning one. It would use a `.env` attribute to determine the prefix of the endpoints URIs. It would ease a possible migration/version bump of the Devices API in the future, avoiding issues with active users.
+
 
 *Thank you!*
