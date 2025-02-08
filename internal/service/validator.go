@@ -33,7 +33,8 @@ func ValidateDeviceUpdate(deviceUpdate model.Device, device model.Device) error 
 		}
 	}
 
-	if deviceUpdate.State != "" && !IsValidState(deviceUpdate.State) {
+	caseInsensitiveState := strings.ToLower(deviceUpdate.State)
+	if deviceUpdate.State != "" && !IsValidState(caseInsensitiveState) {
 		return fmt.Errorf("Invalid device state")
 	}
 

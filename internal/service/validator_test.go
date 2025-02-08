@@ -16,6 +16,8 @@ func TestIsValidState(t *testing.T) {
 		{string(model.AVAILABLE), true},
 		{string(model.IN_USE), true},
 		{string(model.INACTIVE), true},
+		{"aVAiLaBlE", true},
+		{"IN-USE", true},
 		{"unknown", false},
 		{"", false},
 	}
