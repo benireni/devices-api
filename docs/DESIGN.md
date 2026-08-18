@@ -39,7 +39,7 @@ marketplace, not a DAW. No accounts, no server, no network calls.
 | D7 | Primary editor | Tap-to-place chords over lyrics | Structurally prevents malformed charts. |
 | D8 | Tab editor | Dedicated monospace grid editor | Tabs are a six-string grid, not chords-on-syllables. Separate concern. |
 | D9 | Raw access | Full raw ChordPro read/write mode | The paste-from-web path, the parser debugging path, the escape hatch. |
-| D10 | v1 guitar features | Chord diagrams, hands-free auto-scroll | Transposition/capo built into the domain layer but not surfaced. |
+| D10 | v1 guitar features | Chord diagrams, hands-free auto-scroll | Nothing else is built. Transposition and capo are not in v1 in any form. |
 | D11 | Aesthetic | Dark-first, stage-friendly | Readable at arm's length in a dim room. |
 | D12 | Design enforcement | Tokens + closed component set + lint rules | Mechanical enforcement, not discipline. |
 | D13 | Observability | Structured local logs + in-app viewer + Sentry | Real diagnostics on a device with no debugger attached. |
@@ -49,6 +49,8 @@ marketplace, not a DAW. No accounts, no server, no network calls.
 
 ### Decisions deliberately deferred
 
+- Transposition, capo, key and tempo handling. Not planned; the parser preserves
+  any such directives generically, so adding them later needs no format change.
 - Sync conflict policy beyond last-write-wins (phase 2).
 - Whether shared folders are real-time or check-out/check-in (phase 3).
 - YouTube URL ingestion — see §11, Risks.
@@ -98,9 +100,6 @@ It is the source of truth. SQLite is a derived index over these files, never the
 {x_qtdn_updated: 2026-08-18T14:22:03Z}
 {title: Tempo Perdido}
 {artist: Legião Urbana}
-{key: G}
-{capo: 2}
-{tempo: 96}
 {x_qtdn_scroll: 38}
 {x_qtdn_audio: media/intro-riff.m4a}
 
@@ -165,7 +164,6 @@ because we need guarantees it does not offer (§5.2).
 src/
   domain/            # Pure TypeScript. Zero React, zero React Native, zero I/O.
     chordpro/        #   parser, serializer, AST types
-    music/           #   chord model, transposition, capo math, key detection
     chart/           #   operations on a parsed chart (insert chord, split line, ...)
   data/              # Persistence. Knows SQLite and the filesystem, not the UI.
     repositories/    #   NoteRepository, FolderRepository, AttachmentRepository
@@ -220,11 +218,8 @@ CREATE TABLE folders (
 CREATE TABLE notes (
   id          TEXT PRIMARY KEY,      -- UUIDv7, mirrors x_qtdn_id in the file
   folder_id   TEXT REFERENCES folders(id),
-  title       TEXT NOT NULL,
-  artist      TEXT,
-  song_key    TEXT,
-  capo        INTEGER NOT NULL DEFAULT 0,
-  tempo       INTEGER,
+  title       TEXT NOT NULL,         -- denormalized from the file, for listing
+  artist      TEXT,                  -- denormalized from the file, for listing
   body        TEXT NOT NULL,         -- the full ChordPro source
   rev         INTEGER NOT NULL DEFAULT 1,
   owner_id    TEXT,                  -- dormant in v1
