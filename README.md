@@ -68,3 +68,13 @@ inverses. Three editing modes — structured, tab, and raw — read and write th
 so if that invariant broke, an edit made in one mode would silently corrupt the note when
 saved from another. It is tested with generated charts in
 `packages/chordpro/test/roundtrip.test.ts` and is not allowed to regress.
+
+## Component set
+
+The gallery route renders every token and component in one place, so the visual language
+can be judged as a set rather than one screen at a time. When the component set grows, it
+grows here first.
+
+| Song screen | Component gallery |
+|---|---|
+| ![Song screen](docs/images/screen-song.png) | ![Component set](docs/images/component-set.png) |
