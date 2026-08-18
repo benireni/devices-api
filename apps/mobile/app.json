@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "qtdn",
+    "slug": "qtdn",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "qtdn",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.qtdn.mobile"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
