@@ -71,10 +71,11 @@ export default function Gallery() {
           {TYPE_VARIANTS.map((variant) => (
             <View key={variant} style={styles.typeRow}>
               <Text variant={variant} tone={variant === 'chord' ? 'chord' : 'text'}>
-                {variant === 'tab' ? 'e|--0--2--|' : 'Tempo Perdido'}
+                {variant === 'tab' ? 'e|--0--2--|' : variant === 'chord' ? 'Am7 D/F#' : 'Tempo Perdido'}
               </Text>
               <Text variant="caption" tone="textMuted">
-                {variant} · {typography[variant].fontSize}/{typography[variant].lineHeight}
+                {variant} · {typography[variant].fontSize}/{typography[variant].lineHeight} ·{' '}
+                {typography[variant].fontFamily.replace(/_/g, ' ')}
               </Text>
             </View>
           ))}

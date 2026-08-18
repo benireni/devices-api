@@ -2,29 +2,36 @@
  * The design system's single source of truth.
  *
  * This is the only file in the app permitted to contain a raw color literal; the
- * `qtdn/design-tokens` lint rule rejects them everywhere else. Names are semantic
- * (`color.chord`, not `orange500`) so re-theming is a change here and nowhere else.
+ * design-token lint rule rejects them everywhere else. Names are semantic
+ * (`color.chord`, not `sage500`) so re-theming is a change here and nowhere else.
  *
  * Dark-first: qtdn is read at arm's length, in dim rooms, while both hands are busy.
  */
 
+/**
+ * Palette.
+ *
+ * Warm rather than clinical — the greys lean toward paper, not toward slate, so a
+ * screen full of lyrics reads like a songbook at night instead of a terminal.
+ * Contrast ratios are measured against `background` and all clear WCAG AA (4.5:1).
+ */
 export const color = {
-  /** App background. Near-black rather than pure black, to soften OLED smearing. */
-  background: '#0B0B0D',
-  /** Raised surfaces: cards, sheets, the keyboard accessory bar. */
-  surface: '#151519',
+  /** App background. Near-black, slightly warm, to soften OLED smearing. */
+  background: '#0E0F11',
+  /** Raised surfaces: tab blocks, cards, sheets, the keyboard accessory bar. */
+  surface: '#181A1D',
   /** Hairlines and dividers. */
-  border: '#2A2A31',
-  /** Lyrics and body copy. 13.9:1 on `background`. */
-  text: '#ECECEE',
-  /** Secondary copy: folder counts, timestamps, section labels. 5.6:1 on `background`. */
-  textMuted: '#9A9AA4',
-  /** Chords. The one saturated color in the app, so the eye finds them instantly. */
-  chord: '#F5A623',
-  /** Interactive accent: primary buttons, selection, the auto-scroll control. */
-  accent: '#F5A623',
-  /** Destructive actions only. */
-  danger: '#FF6B6B',
+  border: '#2A2D32',
+  /** Lyrics and body copy. Warm off-white — paper, not printer paper. 15.3:1. */
+  text: '#E9E5DE',
+  /** Secondary copy: folder counts, timestamps, section labels. 6.5:1. */
+  textMuted: '#9B968E',
+  /** Chords. The one color in the app that means "chord" and nothing else. 9.4:1. */
+  chord: '#A3BE8C',
+  /** Interactive only: buttons, selection, the auto-scroll control. 9.1:1. */
+  accent: '#8FB8CE',
+  /** Destructive actions only. 7.1:1. */
+  danger: '#D08A92',
 } as const;
 
 /** 4pt base scale. Every margin and padding in the app comes from here. */
@@ -47,20 +54,43 @@ export const radius = {
 export const HIT_SLOP = 44;
 
 /**
+ * Typefaces, assigned by what the text *is* rather than by where it sits.
+ *
+ * - Fraunces for display. A variable serif with real character in its shapes, so the
+ *   app has a voice instead of defaulting to the system sans.
+ * - Newsreader for prose. Warm, high-legibility serif for lyrics, which is the text
+ *   you read continuously while your hands are busy.
+ * - JetBrains Mono for notation. Chords and tabs are both notation rather than prose,
+ *   and giving them one monospaced voice makes that distinction visible — with the
+ *   side benefit that chord glyphs occupy predictable width above the lyric.
+ *
+ * Weight lives in the family name because each weight is a separately loaded file.
+ * Never pair these with `fontWeight`: that triggers synthetic bolding on top of an
+ * already-bold face.
+ */
+export const fontFamily = {
+  display: 'Fraunces_700Bold',
+  prose: 'Newsreader_400Regular',
+  proseMedium: 'Newsreader_500Medium',
+  notation: 'JetBrainsMono_700Bold',
+  notationRegular: 'JetBrainsMono_400Regular',
+} as const;
+
+/**
  * The type scale. `Text` accepts only these variant names, which is what stops screens
  * from inventing one-off sizes.
  */
 export const typography = {
-  title: { fontSize: 28, lineHeight: 34, fontWeight: '700' },
-  heading: { fontSize: 20, lineHeight: 26, fontWeight: '600' },
-  body: { fontSize: 16, lineHeight: 22, fontWeight: '400' },
-  caption: { fontSize: 13, lineHeight: 18, fontWeight: '400' },
+  title: { fontFamily: fontFamily.display, fontSize: 30, lineHeight: 38 },
+  heading: { fontFamily: fontFamily.display, fontSize: 21, lineHeight: 28 },
+  body: { fontFamily: fontFamily.prose, fontSize: 17, lineHeight: 24 },
+  caption: { fontFamily: fontFamily.notationRegular, fontSize: 12, lineHeight: 16 },
   /** Lyrics on the playing screen: larger than body, readable at arm's length. */
-  lyric: { fontSize: 18, lineHeight: 24, fontWeight: '400' },
-  /** Chord glyphs. Bold and tight so they sit clearly above the lyric. */
-  chord: { fontSize: 14, lineHeight: 18, fontWeight: '700' },
+  lyric: { fontFamily: fontFamily.prose, fontSize: 19, lineHeight: 26 },
+  /** Chord glyphs. Bold monospace so they sit clearly above the lyric. */
+  chord: { fontFamily: fontFamily.notation, fontSize: 14, lineHeight: 18 },
   /** Tab blocks. Monospace is not a style choice here — alignment is the content. */
-  tab: { fontSize: 13, lineHeight: 18, fontWeight: '400', fontFamily: 'Menlo' },
+  tab: { fontFamily: fontFamily.notationRegular, fontSize: 13, lineHeight: 18 },
 } as const;
 
 export type TypeVariant = keyof typeof typography;
