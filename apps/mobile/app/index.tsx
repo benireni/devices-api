@@ -1,4 +1,5 @@
 import { parse } from '@qtdn/chordpro';
+import { Stack } from 'expo-router';
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 
@@ -35,6 +36,7 @@ export default function Home() {
 
   return (
     <Screen>
+      <Stack.Screen options={{ title: 'qtdn' }} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text variant="title" style={{ marginBottom: space.xs }}>
           Tempo Perdido
