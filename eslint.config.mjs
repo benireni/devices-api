@@ -17,7 +17,7 @@ const PLATFORM_IMPORTS = ['react', 'react-dom', 'react-native', 'expo', 'expo-*'
 const COLOR_LITERAL = String.raw`/^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(?:rgb|rgba|hsl|hsla)\(.*)$/`;
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/node_modules/**', '**/coverage/**', '**/.expo/**'] },
+  { ignores: ['**/dist/**', '**/dist-web/**', '**/node_modules/**', '**/coverage/**', '**/.expo/**'] },
 
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
