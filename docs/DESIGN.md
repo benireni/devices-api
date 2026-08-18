@@ -297,19 +297,32 @@ awake. No editing affordances visible.
 
 Dark-first, typography-led, stage-legible.
 
-**Tokens** live in `ui/tokens/` as plain TypeScript objects — spacing scale, type scale,
-color roles, radii, motion durations. Semantic names only (`color.chord`,
-`color.lyric.muted`), never literal names like `gray700`, so a palette change is one file.
+**Tokens** live in `ui/tokens.ts` as plain TypeScript objects — spacing scale, type
+scale, color roles, radii, typefaces. Semantic names only (`color.chord`,
+`color.textMuted`), never literal names like `sage500`, so a palette change is one file.
+
+**Green is the identity.** One identity green serves both chords and interactive
+affordances; `danger` is the only other hue. It is mid-saturation on purpose: brighter
+greens score better against the background but converge toward the lyric white, so they
+read as pale rather than green exactly where chords live. Every role records its measured
+contrast ratio beside its value.
+
+**Typefaces are assigned by what the text is**, not where it sits. Fraunces for display,
+Newsreader for prose (lyrics and body), JetBrains Mono for notation (chords and tabs).
+Chords and tabs share one monospaced voice because both are notation rather than prose,
+which also gives chord glyphs predictable width above the lyric.
 
 **Component set is closed.** Screens compose from `ui/components/` and may not introduce
 new visual primitives. If a screen needs something the set doesn't have, the set grows
-deliberately — that's the review moment where consistency is actually decided.
+deliberately — that's the review moment where consistency is actually decided. The
+gallery route renders the whole set on one screen so it can be judged as a set.
 
 **Enforcement is mechanical**, because "always-enforced" cannot rest on discipline:
 
-- `react-native/no-color-literals` and `react-native/no-inline-styles` as errors.
-- `no-restricted-imports` blocking `react-native`'s `StyleSheet` outside `ui/`.
-- A custom lint rule rejecting numeric spacing values not drawn from the scale.
+- A `no-restricted-syntax` rule rejecting hex, `rgb()` and `hsl()` literals anywhere
+  outside `ui/tokens.ts`.
+- `no-restricted-imports` blocking React, React Native and Expo inside the domain core.
+- `react-hooks` rules on the app.
 - CI fails on any of the above.
 
 Accessibility floor: minimum 4.5:1 contrast for lyric text on the dark ground, Dynamic

@@ -9,6 +9,19 @@
  */
 
 /**
+ * The identity green.
+ *
+ * qtdn is a green app. This is the color on every chart and every control, and the only
+ * hue in the palette besides `danger`.
+ *
+ * Mid-saturation on purpose. Brighter greens measure better against the background but
+ * converge toward the lyric white (a pale mint sits at 1.12:1 against `text`), so they
+ * read as *pale* rather than green when they sit directly above a lyric. This one holds
+ * its hue where it actually appears.
+ */
+const IDENTITY = '#8FCB6E';
+
+/**
  * Palette.
  *
  * Warm rather than clinical — the greys lean toward paper, not toward slate, so a
@@ -26,10 +39,10 @@ export const color = {
   text: '#E9E5DE',
   /** Secondary copy: folder counts, timestamps, section labels. 6.5:1. */
   textMuted: '#9B968E',
-  /** Chords. The one color in the app that means "chord" and nothing else. 9.4:1. */
-  chord: '#A3BE8C',
-  /** Interactive only: buttons, selection, the auto-scroll control. 9.1:1. */
-  accent: '#8FB8CE',
+  /** Chords. The most frequent expression of the identity green. 10.0:1. */
+  chord: IDENTITY,
+  /** Interactive: buttons, selection, the auto-scroll control. 10.0:1. */
+  accent: IDENTITY,
   /** Destructive actions only. 7.1:1. */
   danger: '#D08A92',
 } as const;

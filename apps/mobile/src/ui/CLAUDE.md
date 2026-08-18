@@ -18,9 +18,20 @@ file and nowhere else.
 Colors carry their measured contrast ratio against `background` in a comment. All clear
 WCAG AA (4.5:1). If you change a color, re-measure and update the comment.
 
-`color.chord` means "chord" and nothing else. `color.accent` is interactive affordances
-only. Keeping them distinct is what lets the eye find chords instantly — do not collapse
-them back into one value.
+**Green is the app's identity.** One identity green (`IDENTITY` in `tokens.ts`) serves
+both `color.chord` and `color.accent`; `danger` is the only other hue. Chords are simply
+the most frequent place you see it.
+
+It is mid-saturation deliberately. Brighter greens score better against the background but
+converge toward the lyric white — a pale mint measures 1.12:1 against `text` — so they
+read as *pale* rather than green exactly where chords live, directly above a lyric. If you
+change it, check the ratio against `text`, not just against `background`.
+
+Chords and controls sharing one value means form has to carry the distinction: chords are
+bare glyphs, controls are filled or bordered shapes. That holds in practice, but a green
+button sitting directly beside green chords is the case to watch. If it ever reads
+ambiguously, split the ramp by luminance within the same hue rather than introducing a
+second hue.
 
 ## Typefaces
 
