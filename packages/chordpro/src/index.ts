@@ -13,6 +13,17 @@ export type {
   TabBlock,
 } from './ast';
 
+export {
+  EMPTY_SPEC,
+  NOTES,
+  QUALITIES,
+  SEVENTHS,
+  SUSPENSIONS,
+  TENSIONS,
+  buildChord,
+  parseChord,
+} from './chord';
+export type { ChordSpec, Quality, Seventh, Suspension } from './chord';
 export { compose, decompose, setChordAt, setText, words } from './edit';
 export type { Word } from './edit';
 export { parse } from './parse';

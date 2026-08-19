@@ -1,48 +1,20 @@
+import {
+  EMPTY_SPEC,
+  NOTES,
+  QUALITIES,
+  SEVENTHS,
+  SUSPENSIONS,
+  TENSIONS,
+  buildChord,
+  parseChord,
+  type ChordSpec,
+} from '@qtdn/chordpro';
+import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { color, radius, space } from '../tokens';
 import { Button } from './Button';
 import { Text } from './Text';
-
-const ROOTS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
-
-/**
- * Chord qualities in Brazilian cifra notation, ordered by how often an acoustic player
- * reaches for them.
- *
- * The notation is not the English one: there is no `maj`. A bare root is the major triad,
- * `7` is the dominant seventh, `7M` is the major seventh, and `m` means minor and nothing
- * else — so `D7M` rather than `Dmaj7`, and `Am7` for the minor seventh.
- *
- * This list is the vocabulary. A chord can only be built from a root and one of these, so
- * a malformed symbol cannot be entered. Extending it is a one-line change here.
- */
-const QUALITIES = [
-  '',
-  'm',
-  '7',
-  'm7',
-  '7M',
-  '6',
-  'm6',
-  '9',
-  'sus4',
-  'sus2',
-  '7(9)',
-  '7M(9)',
-  'm7(9)',
-  'm7(b5)',
-  '7(b9)',
-  '7(#9)',
-  '7(#11)',
-  '7(13)',
-  '7(b13)',
-  '6/9',
-  'm7M',
-  '°',
-  'dim7',
-  '+',
-];
 
 export interface ChordPickerProps {
   visible: boolean;
@@ -53,45 +25,132 @@ export interface ChordPickerProps {
   onDismiss: () => void;
 }
 
+/**
+ * Builds a chord rather than choosing one from a list.
+ *
+ * Each row is one independent decision — root, quality, seventh, suspension, tensions,
+ * bass — and the symbol above updates as they change. Enumerating every chord a musician
+ * might want was never going to work; the parts are finite, and combining them can only
+ * produce a well-formed cifra symbol.
+ */
 export function ChordPicker({ visible, word, current, onSelect, onDismiss }: ChordPickerProps) {
-  const [currentRoot, currentQuality] = split(current);
+  const [spec, setSpec] = useState<ChordSpec>(EMPTY_SPEC);
+
+  useEffect(() => {
+    if (visible) {
+      setSpec(parseChord(current ?? '') ?? EMPTY_SPEC);
+    }
+  }, [visible, current]);
+
+  const symbol = buildChord(spec);
+  const patch = (over: Partial<ChordSpec>) => {
+    const next = { ...spec, ...over };
+    setSpec(next);
+    onSelect(buildChord(next));
+  };
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onDismiss}>
       <Pressable style={styles.backdrop} onPress={onDismiss}>
         <Pressable style={styles.sheet} onPress={() => undefined}>
-          <Text variant="caption" tone="textMuted">
-            Chord over “{word}”
-          </Text>
+          <View style={styles.header}>
+            <Text variant="heading" tone="chord">
+              {symbol}
+            </Text>
+            <Text variant="caption" tone="textMuted">
+              over “{word}”
+            </Text>
+          </View>
 
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.row}>
-              {ROOTS.map((root) => (
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <Row label="Root">
+              {NOTES.map((note) => (
                 <Chip
-                  key={root}
-                  label={root}
-                  selected={root === currentRoot}
+                  key={note}
+                  label={note}
+                  selected={note === spec.root}
                   onPress={() => {
-                    onSelect(`${root}${currentQuality}`);
+                    patch({ root: note });
                   }}
                 />
               ))}
-            </View>
-          </ScrollView>
+            </Row>
 
-          <ScrollView style={styles.qualities}>
-            <View style={styles.wrap}>
+            <Row label="Quality">
               {QUALITIES.map((quality) => (
                 <Chip
-                  key={quality || 'triad'}
-                  label={`${currentRoot ?? 'C'}${quality}`}
-                  selected={quality === currentQuality}
+                  key={quality || 'major'}
+                  label={quality === '' ? 'major' : quality}
+                  selected={quality === spec.quality}
                   onPress={() => {
-                    onSelect(`${currentRoot ?? 'C'}${quality}`);
+                    patch({ quality });
                   }}
                 />
               ))}
-            </View>
+            </Row>
+
+            <Row label="Seventh">
+              {SEVENTHS.map((seventh) => (
+                <Chip
+                  key={seventh || 'none'}
+                  label={seventh === '' ? '—' : seventh}
+                  selected={seventh === spec.seventh}
+                  onPress={() => {
+                    patch({ seventh });
+                  }}
+                />
+              ))}
+            </Row>
+
+            <Row label="Suspension">
+              {SUSPENSIONS.map((sus) => (
+                <Chip
+                  key={sus || 'none'}
+                  label={sus === '' ? '—' : sus}
+                  selected={sus === spec.sus}
+                  onPress={() => {
+                    patch({ sus });
+                  }}
+                />
+              ))}
+            </Row>
+
+            <Row label="Tensions">
+              {TENSIONS.map((tension) => (
+                <Chip
+                  key={tension}
+                  label={tension}
+                  selected={spec.tensions.includes(tension)}
+                  onPress={() => {
+                    patch({
+                      tensions: spec.tensions.includes(tension)
+                        ? spec.tensions.filter((value) => value !== tension)
+                        : [...spec.tensions, tension],
+                    });
+                  }}
+                />
+              ))}
+            </Row>
+
+            <Row label="Bass">
+              <Chip
+                label="—"
+                selected={spec.bass === null}
+                onPress={() => {
+                  patch({ bass: null });
+                }}
+              />
+              {NOTES.map((note) => (
+                <Chip
+                  key={note}
+                  label={note}
+                  selected={note === spec.bass}
+                  onPress={() => {
+                    patch({ bass: note });
+                  }}
+                />
+              ))}
+            </Row>
           </ScrollView>
 
           <View style={styles.actions}>
@@ -108,6 +167,17 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
         </Pressable>
       </Pressable>
     </Modal>
+  );
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <View style={styles.rowBlock}>
+      <Text variant="caption" tone="textMuted">
+        {label}
+      </Text>
+      <View style={styles.wrap}>{children}</View>
+    </View>
   );
 }
 
@@ -134,15 +204,6 @@ function Chip({
   );
 }
 
-/** Splits a symbol into the root the picker knows and whatever follows it. */
-function split(chord: string | null): [string | null, string] {
-  if (chord === null) return [null, ''];
-  const root = ROOTS.filter((candidate) => chord.startsWith(candidate)).sort(
-    (a, b) => b.length - a.length,
-  )[0];
-  return root === undefined ? [null, ''] : [root, chord.slice(root.length)];
-}
-
 const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: color.backdrop },
   sheet: {
@@ -151,13 +212,15 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.lg,
     padding: space.lg,
     gap: space.md,
-    maxHeight: '70%',
+    maxHeight: '80%',
   },
-  row: { flexDirection: 'row', gap: space.sm },
+  header: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
+  rowBlock: { gap: space.sm, marginBottom: space.lg },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  qualities: { flexGrow: 0 },
   chip: {
     minHeight: 44,
+    minWidth: 44,
+    alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: space.md,
     borderRadius: radius.sm,
@@ -165,5 +228,5 @@ const styles = StyleSheet.create({
     borderColor: color.border,
   },
   chipSelected: { backgroundColor: color.accent, borderColor: color.accent },
-  actions: { flexDirection: 'row', gap: space.md, paddingTop: space.sm },
+  actions: { flexDirection: 'row', gap: space.md },
 });

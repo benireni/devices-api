@@ -56,8 +56,16 @@ codebase** — not in the picker, the demo charts, the tests or the generators.
 | Half-diminished | `Dm7(b5)` | — |
 | Diminished | `D°` | — |
 
-`m` means minor and nothing else. Tensions go in parentheses: `D7(9)`, `D7(b13)`,
-`D7(#11)`.
+| Slash chord | `Dm7/G` | — |
+
+`m` means minor and nothing else. Tensions go in parentheses, lowest first, in one group:
+`D7(9)`, `D7(9,13)`, `D7(#11)`.
+
+Symbols are **built, not chosen**: `buildChord` assembles root, quality, seventh,
+suspension, tensions and bass into a symbol, and `parseChord` reads one back. The set of
+chords a musician might want is effectively infinite; the parts are finite. `parseChord`
+returns `null` for anything outside that vocabulary rather than mangling an imported
+symbol into the nearest representable chord.
 
 The parser treats a chord as opaque text between brackets, so this is a vocabulary
 decision rather than a format one — but the picker's list, the demo charts and the
