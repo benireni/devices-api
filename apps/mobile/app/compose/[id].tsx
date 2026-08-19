@@ -248,6 +248,10 @@ function Line({
           onPress={() => {
             onWord(word.offset, word.text);
           }}
+          // Words sit inside the line's own Pressable, and the child consumes the
+          // gesture — so without this, a long press anywhere on a word opened the chord
+          // picker and the line menu was unreachable.
+          onLongPress={onEdit}
           style={styles.word}
         >
           <Text variant="chord" tone="chord">

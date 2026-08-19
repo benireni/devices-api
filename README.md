@@ -80,9 +80,13 @@ saved from another. It is tested with generated charts in
 |---|---|---|
 | ![Library](docs/images/screen-library.png) | ![Folder](docs/images/screen-folder.png) | ![Song](docs/images/screen-note.png) |
 
-| Compose | Chord builder | Raw source |
+| Compose | Chord builder | Line menu |
 |---|---|---|
-| ![Compose](docs/images/screen-compose.png) | ![Chord builder](docs/images/screen-chord-builder.png) | ![Raw source](docs/images/screen-editor.png) |
+| ![Compose](docs/images/screen-compose.png) | ![Chord builder](docs/images/screen-chord-builder.png) | ![Line menu](docs/images/screen-line-menu.png) |
+
+| Raw source | Logs | Tensions |
+|---|---|---|
+| ![Raw source](docs/images/screen-editor.png) | ![Logs](docs/images/screen-logs.png) | ![Tensions](docs/images/screen-note-tensions.png) |
 
 The song screen carries the chord diagrams for the chords it uses and an auto-scroll bar.
 Chords are placed by tapping the word they sit above and building a symbol from its parts;
