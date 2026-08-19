@@ -37,7 +37,7 @@ function SectionBlock({ section }: { section: Section }) {
     <View style={styles.section}>
       {section.label !== null && section.label !== '' && (
         <Text variant="caption" tone="textMuted" style={{ marginBottom: space.xs }}>
-          {section.label.toUpperCase()}
+          {section.label}
         </Text>
       )}
       {section.children.map(renderNode)}
@@ -50,9 +50,11 @@ function LyricRow({ line }: { line: LyricLine }) {
     <View style={styles.lyricRow}>
       {line.segments.map((segment, index) => (
         <View key={index} style={styles.segment}>
-          <Text variant="chord" tone="chord">
-            {segment.chord ?? ' '}
-          </Text>
+          <View style={styles.chordSlot}>
+            <Text variant="chord" tone="chord">
+              {segment.chord ?? ' '}
+            </Text>
+          </View>
           <Text variant="lyric">{segment.text}</Text>
         </View>
       ))}
@@ -65,7 +67,7 @@ function TabView({ tab }: { tab: TabBlock }) {
     <View style={styles.tab}>
       {tab.label !== null && tab.label !== '' && (
         <Text variant="caption" tone="textMuted" style={{ marginBottom: space.xs }}>
-          {tab.label.toUpperCase()}
+          {tab.label}
         </Text>
       )}
       {tab.lines.map((tabLine, index) => (
@@ -81,6 +83,10 @@ const styles = StyleSheet.create({
   section: { marginBottom: space.lg },
   lyricRow: { flexDirection: 'row', flexWrap: 'wrap' },
   segment: { flexDirection: 'column' },
+  // The column is as wide as its widest row. Without this gap, a chord sitting over a
+  // syllable narrower than itself butts straight against the next chord — which is the
+  // normal case for a bare progression like `[Dm7(9)]  [G7(b13)]  [Cmaj7(9)]`.
+  chordSlot: { paddingRight: space.md },
   blank: { height: space.md },
   tab: {
     backgroundColor: color.surface,

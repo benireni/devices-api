@@ -73,6 +73,12 @@ screens later.
    reviewed.
 4. Run `npm run lint` — the token rules will tell you if you reached for a raw value.
 
+## Never transform user-authored text
+
+`toUpperCase()` on a section or tab label turns `Dm7(9)` into `DM7(9)`, which is a
+different chord name. Casing, truncation and other transforms are for app chrome — a
+`FOLDERS` heading we wrote — never for text that came out of a note.
+
 ## Known trade-off
 
 `ChartView` gives each segment its own column, so a chord wider than the text run beneath
