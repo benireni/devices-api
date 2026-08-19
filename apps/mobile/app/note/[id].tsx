@@ -1,4 +1,4 @@
-import { parse } from '@qtdn/chordpro';
+import { getDirective, parse, serialize, setDirective } from '@qtdn/chordpro';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -6,12 +6,15 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { library, type Note } from '@/data';
 import { useLibrary } from '@/hooks/useLibrary';
 import { log } from '@/observability';
+import { DEFAULT_SPEED, adjustSpeed, readSpeed } from '@/player/scroll';
+import { useAutoScroll } from '@/player/useAutoScroll';
 import {
   ChartView,
   Button,
   ConfirmSheet,
   OptionSheet,
   Screen,
+  ScrollControl,
   Text,
   type Option,
 } from '@/ui/components';
@@ -23,9 +26,14 @@ export default function NoteScreen() {
   const [confirming, setConfirming] = useState(false);
   const [moving, setMoving] = useState(false);
   const { snapshot } = useLibrary();
+  const [speed, setSpeed] = useState(DEFAULT_SPEED);
+  const { running, setRunning, scroller, syncOffset } = useAutoScroll(speed);
 
   useEffect(() => {
-    void library.readNote(id, folder ?? null).then(setNote);
+    void library.readNote(id, folder ?? null).then((value) => {
+      setNote(value);
+      setSpeed(readSpeed(getDirective(parse(value.source).chart, 'x_qtdn_scroll')));
+    });
   }, [id, folder]);
 
   const suffix = folder === undefined ? '' : `?folder=${folder}`;
@@ -37,6 +45,19 @@ export default function NoteScreen() {
       .filter((candidate) => candidate.name !== from)
       .map((candidate) => ({ key: candidate.name, label: candidate.name })),
   ];
+
+  /** Speed is a property of the song, so it is written back into the note itself. */
+  async function changeSpeed(steps: number) {
+    if (note === null) return;
+    const next = adjustSpeed(speed, steps);
+    setSpeed(next);
+
+    const updated = serialize(
+      setDirective(parse(note.source).chart, 'x_qtdn_scroll', String(next)),
+    );
+    await library.saveNote(id, from, updated);
+    setNote({ ...note, source: updated });
+  }
 
   async function remove() {
     await library.deleteNote(id, from);
@@ -59,7 +80,15 @@ export default function NoteScreen() {
     <Screen>
       <Stack.Screen options={{ title: note?.title ?? '' }} />
       {note !== null && chart !== null && (
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          ref={scroller}
+          onScroll={(event) => {
+            syncOffset(event.nativeEvent.contentOffset.y);
+          }}
+          scrollEventThrottle={16}
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
           <Text variant="title" style={{ marginBottom: space.xs }}>
             {note.title}
           </Text>
@@ -106,6 +135,19 @@ export default function NoteScreen() {
             />
           </View>
         </ScrollView>
+      )}
+
+      {note !== null && (
+        <ScrollControl
+          running={running}
+          speed={speed}
+          onToggle={() => {
+            setRunning(!running);
+          }}
+          onAdjust={(steps) => {
+            void changeSpeed(steps);
+          }}
+        />
       )}
 
       <OptionSheet

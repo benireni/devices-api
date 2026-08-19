@@ -1,4 +1,4 @@
-import type { LyricLine, Segment } from './ast';
+import type { Chart, LyricLine, Node, Segment } from './ast';
 
 /**
  * Editing operations over a lyric line.
@@ -128,4 +128,35 @@ export function setText(line: LyricLine, text: string): LyricLine {
   }
 
   return compose({ text, chords: kept });
+}
+
+/**
+ * Sets a top-level directive, inserting it if absent and removing it when `value` is
+ * `null`.
+ *
+ * A new directive lands after the existing leading ones rather than at the very top,
+ * which keeps the metadata block together instead of scattering it as the app learns to
+ * write more fields.
+ */
+export function setDirective(chart: Chart, name: string, value: string | null): Chart {
+  const existing = chart.nodes.findIndex((node) => node.kind === 'directive' && node.name === name);
+
+  if (existing !== -1) {
+    const nodes =
+      value === null
+        ? chart.nodes.filter((_, index) => index !== existing)
+        : chart.nodes.map((node, index) =>
+            index === existing ? { kind: 'directive' as const, name, value } : node,
+          );
+    return { nodes };
+  }
+
+  if (value === null) return chart;
+
+  let insertAt = 0;
+  while (chart.nodes[insertAt]?.kind === 'directive') insertAt += 1;
+
+  const nodes: Node[] = [...chart.nodes];
+  nodes.splice(insertAt, 0, { kind: 'directive', name, value });
+  return { nodes };
 }

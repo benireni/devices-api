@@ -2,7 +2,16 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
 import type { LyricLine } from '../src/index';
-import { compose, decompose, parse, serialize, setChordAt, setText, words } from '../src/index';
+import {
+  compose,
+  decompose,
+  parse,
+  serialize,
+  setChordAt,
+  setDirective,
+  setText,
+  words,
+} from '../src/index';
 
 function line(source: string): LyricLine {
   const node = parse(source).chart.nodes[0];
@@ -122,5 +131,34 @@ describe('setText', () => {
 
   it('keeps a chord pinned exactly at the end of the text', () => {
     expect(render(setText(line('[C]ab [G]cd'), 'ab '))).toBe('[C]ab [G]');
+  });
+});
+
+describe('setDirective', () => {
+  const chart = (source: string) => parse(source).chart;
+  const text = (value: ReturnType<typeof chart>) => serialize(value);
+
+  it('replaces the value of an existing directive', () => {
+    expect(text(setDirective(chart('{title: A}\n{artist: B}'), 'title', 'C'))).toBe(
+      '{title: C}\n{artist: B}',
+    );
+  });
+
+  it('inserts after the leading metadata rather than at the very top', () => {
+    expect(text(setDirective(chart('{title: A}\n\nlyric'), 'x_qtdn_scroll', '30'))).toBe(
+      '{title: A}\n{x_qtdn_scroll: 30}\n\nlyric',
+    );
+  });
+
+  it('inserts at the top of a note with no directives', () => {
+    expect(text(setDirective(chart('lyric'), 'title', 'A'))).toBe('{title: A}\nlyric');
+  });
+
+  it('removes a directive when the value is null', () => {
+    expect(text(setDirective(chart('{title: A}\n{artist: B}'), 'artist', null))).toBe('{title: A}');
+  });
+
+  it('does nothing when removing a directive that is not there', () => {
+    expect(text(setDirective(chart('{title: A}'), 'artist', null))).toBe('{title: A}');
   });
 });

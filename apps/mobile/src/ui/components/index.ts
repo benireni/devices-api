@@ -8,6 +8,7 @@ export { OptionSheet } from './OptionSheet';
 export type { Option } from './OptionSheet';
 export { PromptSheet } from './PromptSheet';
 export { Screen } from './Screen';
+export { ScrollControl } from './ScrollControl';
 export { Sheet } from './Sheet';
 export { Text } from './Text';
 export { TextField } from './TextField';

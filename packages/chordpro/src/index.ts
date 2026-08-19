@@ -28,7 +28,7 @@ export {
   update,
 } from './chord';
 export type { ChordOptions, ChordSpec, Quality, Seventh, Suspension } from './chord';
-export { compose, decompose, setChordAt, setText, words } from './edit';
+export { compose, decompose, setChordAt, setDirective, setText, words } from './edit';
 export type { Word } from './edit';
 export { parse } from './parse';
 export { serialize } from './serialize';

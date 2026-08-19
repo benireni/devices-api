@@ -11,6 +11,7 @@ export default defineConfig({
         'packages/*/src/**/*.ts',
         'apps/mobile/src/data/**/*.ts',
         'apps/mobile/src/observability/**/*.ts',
+        'apps/mobile/src/player/**/*.ts',
       ],
       // Files with no logic to cover. Excluding them keeps the threshold a real measure
       // of tested behaviour rather than something to be lowered until it passes.
@@ -21,6 +22,7 @@ export default defineConfig({
         'apps/mobile/src/data/index.ts', // composition root
         'apps/mobile/src/observability/index.ts', // composition root
         '**/adapters/expoFileStore.ts', // platform binding; cannot run under Node
+        '**/useAutoScroll.ts', // platform binding: animation frames, refs, keep-awake
       ],
       // 100% across the board. Every gap so far has been an unreachable branch worth
       // deleting rather than a test worth writing, so the bar stays here.
