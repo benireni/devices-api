@@ -21,9 +21,13 @@ export {
   SUSPENSIONS,
   TENSIONS,
   buildChord,
+  normalize,
+  optionsFor,
   parseChord,
+  toggleTension,
+  update,
 } from './chord';
-export type { ChordSpec, Quality, Seventh, Suspension } from './chord';
+export type { ChordOptions, ChordSpec, Quality, Seventh, Suspension } from './chord';
 export { compose, decompose, setChordAt, setText, words } from './edit';
 export type { Word } from './edit';
 export { parse } from './parse';

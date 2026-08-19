@@ -9,7 +9,11 @@ import {
   SUSPENSIONS,
   TENSIONS,
   buildChord,
+  normalize,
+  optionsFor,
   parseChord,
+  toggleTension,
+  update,
   type ChordSpec,
 } from '../src/index';
 
@@ -107,5 +111,92 @@ describe('parseChord', () => {
       }),
       { numRuns: 1000 },
     );
+  });
+});
+
+describe('musical validity', () => {
+  it('offers a diminished chord only the sevenths it can carry', () => {
+    expect(optionsFor(spec({ quality: '°' })).sevenths).toEqual(['', '7']);
+  });
+
+  it('offers an augmented chord no seventh at all', () => {
+    // C7(#5) and C7M(#5) are the written forms, and the builder can already make them.
+    expect(optionsFor(spec({ quality: '+' })).sevenths).toEqual(['']);
+  });
+
+  it('allows the minor sixth and the minor/major seventh, which are real chords', () => {
+    expect(optionsFor(spec({ quality: 'm' })).sevenths).toEqual(['', '7', '7M', '6']);
+  });
+
+  it('offers a suspension only when no third is stated', () => {
+    expect(optionsFor(spec({ quality: '' })).suspensions).toEqual(['', 'sus4', 'sus2']);
+    for (const quality of ['m', '°', '+'] as const) {
+      expect(optionsFor(spec({ quality })).suspensions).toEqual(['']);
+    }
+  });
+
+  it('withholds fifth alterations from chords that already alter the fifth', () => {
+    for (const quality of ['°', '+'] as const) {
+      const { tensions } = optionsFor(spec({ quality }));
+      expect(tensions).not.toContain('b5');
+      expect(tensions).not.toContain('#5');
+    }
+  });
+
+  it('withholds a tension that names the same note as the suspension', () => {
+    expect(optionsFor(spec({ sus: 'sus4' })).tensions).not.toContain('11');
+    expect(optionsFor(spec({ sus: 'sus2' })).tensions).not.toContain('9');
+  });
+});
+
+describe('update', () => {
+  it('drops a major seventh when the chord becomes diminished', () => {
+    expect(buildChord(update(spec({ seventh: '7M' }), { quality: '°' }))).toBe('C°');
+  });
+
+  it('drops a suspension when a third is introduced', () => {
+    expect(buildChord(update(spec({ sus: 'sus4' }), { quality: 'm' }))).toBe('Cm');
+  });
+
+  it('drops a fifth alteration when the chord becomes augmented', () => {
+    expect(buildChord(update(spec({ tensions: ['b5'] }), { quality: '+' }))).toBe('C+');
+  });
+
+  it('keeps what remains valid', () => {
+    expect(buildChord(update(spec({ seventh: '7', tensions: ['9'] }), { root: 'G' }))).toBe(
+      'G7(9)',
+    );
+  });
+});
+
+describe('toggleTension', () => {
+  it('replaces another member of the same degree', () => {
+    const ninth = toggleTension(spec({ seventh: '7' }), '9');
+    expect(buildChord(toggleTension(ninth, 'b9'))).toBe('C7(b9)');
+  });
+
+  it('leaves other degrees alone', () => {
+    const withNine = toggleTension(spec({ seventh: '7' }), '9');
+    expect(buildChord(toggleTension(withNine, '13'))).toBe('C7(9,13)');
+  });
+
+  it('removes a tension that is already chosen', () => {
+    const withNine = toggleTension(spec({ seventh: '7' }), '9');
+    expect(buildChord(toggleTension(withNine, '9'))).toBe('C7');
+  });
+
+  it('refuses a tension the current chord cannot take', () => {
+    expect(buildChord(toggleTension(spec({ quality: '°' }), 'b5'))).toBe('C°');
+  });
+});
+
+describe('normalize', () => {
+  it('keeps only the first of two tensions naming the same degree', () => {
+    expect(buildChord(normalize(spec({ seventh: '7', tensions: ['b9', '9'] })))).toBe('C7(9)');
+  });
+
+  it('leaves a coherent chord untouched', () => {
+    const coherent = spec({ root: 'A', quality: 'm', seventh: '7', tensions: ['b5'], bass: 'C' });
+    expect(normalize(coherent)).toEqual(coherent);
   });
 });

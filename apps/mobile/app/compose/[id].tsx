@@ -36,12 +36,17 @@ export default function ComposeScreen() {
     );
   }, []);
 
+  /**
+   * Applies the chord and leaves the sheet open.
+   *
+   * The picker builds a chord across several taps, so closing on the first one made
+   * everything past the root unreachable. Dismissing is the sheet's own decision.
+   */
   function applyChord(chord: string | null) {
     if (lines === null || target === null) return;
     const node = lyricAt(lines, target.line);
     if (node === null) return;
     replace(target.line, renderLine(setChordAt(node, target.offset, chord)));
-    setTarget(null);
   }
 
   async function save() {

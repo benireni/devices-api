@@ -6,7 +6,10 @@ import {
   SUSPENSIONS,
   TENSIONS,
   buildChord,
+  optionsFor,
   parseChord,
+  toggleTension,
+  update,
   type ChordSpec,
 } from '@qtdn/chordpro';
 import { useEffect, useState } from 'react';
@@ -28,10 +31,16 @@ export interface ChordPickerProps {
 /**
  * Builds a chord rather than choosing one from a list.
  *
- * Each row is one independent decision — root, quality, seventh, suspension, tensions,
- * bass — and the symbol above updates as they change. Enumerating every chord a musician
- * might want was never going to work; the parts are finite, and combining them can only
- * produce a well-formed cifra symbol.
+ * Each row is one decision — root, quality, seventh, suspension, tensions, bass — and the
+ * symbol above updates as they change. Enumerating every chord a musician might want was
+ * never going to work; the parts are finite, and combining them can only produce a
+ * well-formed cifra symbol.
+ *
+ * The rows are not independent. A diminished chord cannot take a major seventh, and a
+ * suspension cannot sit on a chord that already states a third, so options that stop
+ * making sense are dimmed rather than removed — a row that changes length as you touch it
+ * is disorienting, and the greyed chip says what is possible. Choosing something that
+ * invalidates an earlier pick drops it, so the symbol on screen is always playable.
  */
 export function ChordPicker({ visible, word, current, onSelect, onDismiss }: ChordPickerProps) {
   const [spec, setSpec] = useState<ChordSpec>(EMPTY_SPEC);
@@ -43,16 +52,31 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
   }, [visible, current]);
 
   const symbol = buildChord(spec);
-  const patch = (over: Partial<ChordSpec>) => {
-    const next = { ...spec, ...over };
+  const options = optionsFor(spec);
+
+  const commit = (next: ChordSpec) => {
     setSpec(next);
     onSelect(buildChord(next));
+  };
+  const patch = (over: Partial<ChordSpec>) => {
+    commit(update(spec, over));
   };
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onDismiss}>
-      <Pressable style={styles.backdrop} onPress={onDismiss}>
-        <Pressable style={styles.sheet} onPress={() => undefined}>
+      <View style={styles.container}>
+        {/*
+          The backdrop is a sibling of the sheet, not its parent. Nesting them meant every
+          press inside the sheet bubbled out and dismissed it, so choosing a chord closed
+          the picker before you could choose anything else.
+        */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss"
+          style={StyleSheet.absoluteFill}
+          onPress={onDismiss}
+        />
+        <View style={styles.sheet}>
           <View style={styles.header}>
             <Text variant="heading" tone="chord">
               {symbol}
@@ -95,6 +119,7 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
                   key={seventh || 'none'}
                   label={seventh === '' ? '—' : seventh}
                   selected={seventh === spec.seventh}
+                  disabled={!options.sevenths.includes(seventh)}
                   onPress={() => {
                     patch({ seventh });
                   }}
@@ -108,6 +133,7 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
                   key={sus || 'none'}
                   label={sus === '' ? '—' : sus}
                   selected={sus === spec.sus}
+                  disabled={!options.suspensions.includes(sus)}
                   onPress={() => {
                     patch({ sus });
                   }}
@@ -121,12 +147,9 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
                   key={tension}
                   label={tension}
                   selected={spec.tensions.includes(tension)}
+                  disabled={!options.tensions.includes(tension)}
                   onPress={() => {
-                    patch({
-                      tensions: spec.tensions.includes(tension)
-                        ? spec.tensions.filter((value) => value !== tension)
-                        : [...spec.tensions, tension],
-                    });
+                    commit(toggleTension(spec, tension));
                   }}
                 />
               ))}
@@ -159,13 +182,14 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
               variant="danger"
               onPress={() => {
                 onSelect(null);
+                onDismiss();
               }}
               style={{ flex: 1 }}
             />
             <Button label="Done" variant="primary" onPress={onDismiss} style={{ flex: 1 }} />
           </View>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -184,20 +208,23 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 function Chip({
   label,
   selected,
+  disabled = false,
   onPress,
 }: {
   label: string;
   selected: boolean;
+  disabled?: boolean;
   onPress: () => void;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ selected }}
+      accessibilityState={{ selected, disabled }}
+      disabled={disabled}
       onPress={onPress}
-      style={[styles.chip, selected && styles.chipSelected]}
+      style={[styles.chip, selected && styles.chipSelected, disabled && styles.chipDisabled]}
     >
-      <Text variant="chord" tone={selected ? 'background' : 'chord'}>
+      <Text variant="chord" tone={selected ? 'background' : disabled ? 'textMuted' : 'chord'}>
         {label}
       </Text>
     </Pressable>
@@ -205,7 +232,7 @@ function Chip({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: color.backdrop },
+  container: { flex: 1, justifyContent: 'flex-end', backgroundColor: color.backdrop },
   sheet: {
     backgroundColor: color.surface,
     borderTopLeftRadius: radius.lg,
@@ -228,5 +255,8 @@ const styles = StyleSheet.create({
     borderColor: color.border,
   },
   chipSelected: { backgroundColor: color.accent, borderColor: color.accent },
+  // Shown rather than hidden: a row that changes length as you select is disorienting,
+  // and seeing that `7M` exists but is unavailable on a diminished chord is informative.
+  chipDisabled: { opacity: 0.3 },
   actions: { flexDirection: 'row', gap: space.md },
 });
