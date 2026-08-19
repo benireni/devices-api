@@ -2,6 +2,8 @@ import { getRandomValues } from 'expo-crypto';
 import { Paths } from 'expo-file-system';
 import { Platform } from 'react-native';
 
+import { log } from '../observability';
+
 import { ExpoFileStore } from './adapters/expoFileStore';
 import { seedDemoLibrary } from './demo';
 import { MemoryFileStore } from './adapters/memoryFileStore';
@@ -34,6 +36,8 @@ function createFileStore(): { files: FileStore; root: string } {
 const { files, root } = createFileStore();
 
 export const library = new Library(files, environment, root);
+
+log.info('library.opened', { platform: Platform.OS, root });
 
 /**
  * Resolves once the library is safe to read.

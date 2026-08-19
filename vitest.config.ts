@@ -7,7 +7,11 @@ export default defineConfig({
       provider: 'v8',
       // Logic only. Screens and components are reviewed by looking at them, not by
       // assertions about their markup.
-      include: ['packages/*/src/**/*.ts', 'apps/mobile/src/data/**/*.ts'],
+      include: [
+        'packages/*/src/**/*.ts',
+        'apps/mobile/src/data/**/*.ts',
+        'apps/mobile/src/observability/**/*.ts',
+      ],
       // Files with no logic to cover. Excluding them keeps the threshold a real measure
       // of tested behaviour rather than something to be lowered until it passes.
       exclude: [
@@ -15,6 +19,7 @@ export default defineConfig({
         '**/ast.ts', // type declarations
         '**/ports.ts', // interfaces
         'apps/mobile/src/data/index.ts', // composition root
+        'apps/mobile/src/observability/index.ts', // composition root
         '**/adapters/expoFileStore.ts', // platform binding; cannot run under Node
       ],
       // 100% across the board. Every gap so far has been an unreachable branch worth
