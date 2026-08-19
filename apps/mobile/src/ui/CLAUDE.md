@@ -79,9 +79,17 @@ screens later.
 different chord name. Casing, truncation and other transforms are for app chrome — a
 `FOLDERS` heading we wrote — never for text that came out of a note.
 
+## Known limitations
+
+The structured editor lists words, so a chord not pinned to a word's first character —
+mid-word, or trailing at the end of a line like `[Gb7(#11)]` — has no word to sit on and
+is not shown there. It is **preserved, not lost**: `setChordAt` only touches the offset it
+is given, and the reading screen and raw editor both still show it. Reaching those chords
+structurally needs a target that is not a word, which is a deliberate later decision.
+
 ## Known trade-off
 
 `ChartView` gives each segment its own column, so a chord wider than the text run beneath
-it stretches that run (`[Cmaj7]a` pushes the `a` out). This is the cost of correct
+it stretches that run (`[C7M(9)]a` pushes the `a` out). This is the cost of correct
 alignment under wrapping without text measurement. Revisit only with a real fix, not by
 abandoning the wrap behavior.

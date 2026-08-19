@@ -7,9 +7,14 @@ import { Text } from './Text';
 const ROOTS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 
 /**
- * Qualities, ordered by how often an acoustic player reaches for them.
+ * Chord qualities in Brazilian cifra notation, ordered by how often an acoustic player
+ * reaches for them.
  *
- * The list is the vocabulary: a chord can only be built from a root and one of these, so
+ * The notation is not the English one: there is no `maj`. A bare root is the major triad,
+ * `7` is the dominant seventh, `7M` is the major seventh, and `m` means minor and nothing
+ * else — so `D7M` rather than `Dmaj7`, and `Am7` for the minor seventh.
+ *
+ * This list is the vocabulary. A chord can only be built from a root and one of these, so
  * a malformed symbol cannot be entered. Extending it is a one-line change here.
  */
 const QUALITIES = [
@@ -17,13 +22,14 @@ const QUALITIES = [
   'm',
   '7',
   'm7',
-  'maj7',
+  '7M',
   '6',
   'm6',
+  '9',
   'sus4',
   'sus2',
   '7(9)',
-  'maj7(9)',
+  '7M(9)',
   'm7(9)',
   'm7(b5)',
   '7(b9)',
@@ -32,6 +38,7 @@ const QUALITIES = [
   '7(13)',
   '7(b13)',
   '6/9',
+  'm7M',
   '°',
   'dim7',
   '+',
@@ -76,8 +83,8 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
             <View style={styles.wrap}>
               {QUALITIES.map((quality) => (
                 <Chip
-                  key={quality || 'major'}
-                  label={quality === '' ? 'maj' : quality}
+                  key={quality || 'triad'}
+                  label={`${currentRoot ?? 'C'}${quality}`}
                   selected={quality === currentQuality}
                   onPress={() => {
                     onSelect(`${currentRoot ?? 'C'}${quality}`);

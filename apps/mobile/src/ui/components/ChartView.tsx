@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   segment: { flexDirection: 'column' },
   // The column is as wide as its widest row. Without this gap, a chord sitting over a
   // syllable narrower than itself butts straight against the next chord — which is the
-  // normal case for a bare progression like `[Dm7(9)]  [G7(b13)]  [Cmaj7(9)]`.
+  // normal case for a bare progression like `[Dm7(9)]  [G7(b13)]  [C7M(9)]`.
   chordSlot: { paddingRight: space.md },
   blank: { height: space.md },
   tab: {

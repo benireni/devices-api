@@ -99,7 +99,7 @@ describe('parse', () => {
       'Cm7(b9)',
       'D°',
       'G7(#11)',
-      'Fmaj7(9)',
+      'F7M(9)',
       'Bm7(b5)',
       'A7(b13)',
       'Dm7/G',
@@ -123,8 +123,8 @@ describe('parse', () => {
   });
 
   it('collects extended chords for a diagram strip without mangling them', () => {
-    const { chart } = parse('[Fmaj7(9)]a [G7(b13)]b [Fmaj7(9)]c');
-    expect(chordsUsed(chart)).toEqual(['Fmaj7(9)', 'G7(b13)']);
+    const { chart } = parse('[F7M(9)]a [G7(b13)]b [F7M(9)]c');
+    expect(chordsUsed(chart)).toEqual(['F7M(9)', 'G7(b13)']);
   });
 
   it('reports an unclosed tab block and keeps its lines', () => {

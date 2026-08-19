@@ -16,11 +16,11 @@ function render(value: LyricLine): string {
 
 describe('decompose / compose', () => {
   it('splits a line into plain text and pinned chords', () => {
-    const { text, chords } = decompose(line('[Fmaj7]Olha que [G7(9)]linda'));
+    const { text, chords } = decompose(line('[F7M]Olha que [G7(9)]linda'));
 
     expect(text).toBe('Olha que linda');
     expect([...chords]).toEqual([
-      [0, ['Fmaj7']],
+      [0, ['F7M']],
       [9, ['G7(9)']],
     ]);
   });

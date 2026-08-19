@@ -40,6 +40,30 @@ docs/                Design document, screenshots, and later ADRs.
 5. **Coverage is 100%**, on lines, statements, functions and branches, for the domain core
    and the data layer. CI fails below it.
 
+## Chord notation
+
+Brazilian cifra, not the English convention. **There is no `maj` anywhere in this
+codebase** — not in the picker, the demo charts, the tests or the generators.
+
+| Chord | Written | Not |
+|---|---|---|
+| Major triad | `D` | `Dmaj` |
+| Dominant seventh | `D7` | — |
+| Major seventh | `D7M` | `Dmaj7` |
+| Minor | `Dm` | — |
+| Minor seventh | `Dm7` | — |
+| Minor/major seventh | `Dm7M` | `Dm(maj7)` |
+| Half-diminished | `Dm7(b5)` | — |
+| Diminished | `D°` | — |
+
+`m` means minor and nothing else. Tensions go in parentheses: `D7(9)`, `D7(b13)`,
+`D7(#11)`.
+
+The parser treats a chord as opaque text between brackets, so this is a vocabulary
+decision rather than a format one — but the picker's list, the demo charts and the
+property-test generators must all agree, or the tests prove nothing about the symbols the
+app actually produces.
+
 ## Out of scope — do not build these
 
 Adding these "while we're here" is the failure mode this section exists to prevent:
