@@ -81,9 +81,9 @@ export default tseslint.config(
 
   {
     name: 'qtdn/esm-config-files',
-    files: ['*.config.{ts,mjs}', 'eslint.config.mjs'],
+    files: ['*.config.{ts,mjs}', 'eslint.config.mjs', 'tools/**/*.mjs'],
     ...tseslint.configs.disableTypeChecked,
-    languageOptions: { parserOptions: { projectService: false } },
+    languageOptions: { globals: globals.node, parserOptions: { projectService: false } },
   },
 
   {

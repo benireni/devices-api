@@ -13,6 +13,7 @@ import {
   ChartView,
   ChordStrip,
   Button,
+  PromptSheet,
   ConfirmSheet,
   OptionSheet,
   Screen,
@@ -27,6 +28,7 @@ export default function NoteScreen() {
   const [note, setNote] = useState<Note | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [moving, setMoving] = useState(false);
+  const [renaming, setRenaming] = useState(false);
   const { snapshot } = useLibrary();
   const [speed, setSpeed] = useState(DEFAULT_SPEED);
   const { running, setRunning, scroller, syncOffset } = useAutoScroll(speed);
@@ -47,6 +49,20 @@ export default function NoteScreen() {
       .filter((candidate) => candidate.name !== from)
       .map((candidate) => ({ key: candidate.name, label: candidate.name })),
   ];
+
+  /**
+   * The title lives in the note's own `{title}` directive, so renaming rewrites that
+   * rather than a field beside it. A title stored in two places is a title that can
+   * disagree with itself.
+   */
+  async function rename(title: string) {
+    if (note === null) return;
+    const updated = serialize(setDirective(parse(note.source).chart, 'title', title.trim()));
+    await library.saveNote(id, from, updated);
+    setNote({ ...note, title: title.trim(), source: updated });
+    log.info('note.renamed', { id });
+    setRenaming(false);
+  }
 
   /** Speed is a property of the song, so it is written back into the note itself. */
   async function changeSpeed(steps: number) {
@@ -121,6 +137,13 @@ export default function NoteScreen() {
 
           <View style={styles.actions}>
             <Button
+              label="Rename"
+              onPress={() => {
+                setRenaming(true);
+              }}
+              style={{ flex: 1 }}
+            />
+            <Button
               label="Move"
               disabled={destinations.length === 0}
               onPress={() => {
@@ -159,6 +182,20 @@ export default function NoteScreen() {
           }}
         />
       )}
+
+      <PromptSheet
+        visible={renaming}
+        title="Rename note"
+        placeholder="Title"
+        initial={note?.title ?? ''}
+        submitLabel="Rename"
+        onSubmit={(title) => {
+          void rename(title);
+        }}
+        onCancel={() => {
+          setRenaming(false);
+        }}
+      />
 
       <OptionSheet
         visible={moving}
