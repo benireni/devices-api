@@ -1,10 +1,20 @@
-import { parse, serialize, setChordAt, setText, words, type LyricLine } from '@qtdn/chordpro';
+import {
+  appendSection,
+  moveLine,
+  parse,
+  removeLine,
+  serialize,
+  setChordAt,
+  setText,
+  words,
+  type LyricLine,
+} from '@qtdn/chordpro';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { library } from '@/data';
-import { Button, ChordPicker, Screen, Text, TextField } from '@/ui/components';
+import { Button, ChordPicker, OptionSheet, Screen, Text, TextField } from '@/ui/components';
 import { color, space } from '@/ui/tokens';
 
 /**
@@ -23,6 +33,8 @@ export default function ComposeScreen() {
   const [lines, setLines] = useState<string[] | null>(null);
   const [editing, setEditing] = useState<number | null>(null);
   const [target, setTarget] = useState<{ line: number; offset: number; word: string } | null>(null);
+  const [menu, setMenu] = useState<number | null>(null);
+  const [sectioning, setSectioning] = useState(false);
 
   useEffect(() => {
     void library.readNote(id, folder ?? null).then((note) => {
@@ -49,6 +61,12 @@ export default function ComposeScreen() {
     replace(target.line, renderLine(setChordAt(node, target.offset, chord)));
   }
 
+  /** Line operations, all of them pure functions over the source lines. */
+  function apply(next: (lines: string[]) => string[]) {
+    setLines((current) => (current === null ? current : next(current)));
+    setMenu(null);
+  }
+
   async function save() {
     if (lines === null) return;
     await library.saveNote(id, folder ?? null, lines.join('\n'));
@@ -68,7 +86,7 @@ export default function ComposeScreen() {
             source={line}
             editing={editing === index}
             onEdit={() => {
-              setEditing(index);
+              setMenu(index);
             }}
             onEditDone={(text) => {
               const node = lyricAt(lines ?? [], index);
@@ -102,6 +120,13 @@ export default function ComposeScreen() {
             }}
             style={{ flex: 1 }}
           />
+          <Button
+            label="Add section"
+            onPress={() => {
+              setSectioning(true);
+            }}
+            style={{ flex: 1 }}
+          />
         </View>
       </ScrollView>
 
@@ -115,6 +140,49 @@ export default function ComposeScreen() {
           style={{ flex: 1 }}
         />
       </View>
+
+      <OptionSheet
+        visible={menu !== null}
+        title="Line"
+        options={[
+          { key: 'edit', label: 'Edit text' },
+          { key: 'up', label: 'Move up' },
+          { key: 'down', label: 'Move down' },
+          { key: 'delete', label: 'Delete', subtitle: 'Removes the whole block if this opens one' },
+        ]}
+        onSelect={(action) => {
+          const index = menu;
+          if (index === null) return;
+          if (action === 'edit') {
+            setMenu(null);
+            setEditing(index);
+            return;
+          }
+          if (action === 'up') apply((value) => moveLine(value, index, -1));
+          if (action === 'down') apply((value) => moveLine(value, index, 1));
+          if (action === 'delete') apply((value) => removeLine(value, index));
+        }}
+        onCancel={() => {
+          setMenu(null);
+        }}
+      />
+
+      <OptionSheet
+        visible={sectioning}
+        title="Add section"
+        options={[
+          { key: 'verse', label: 'Verse' },
+          { key: 'chorus', label: 'Chorus' },
+          { key: 'bridge', label: 'Bridge' },
+        ]}
+        onSelect={(name) => {
+          setSectioning(false);
+          apply((value) => appendSection(value, name, null));
+        }}
+        onCancel={() => {
+          setSectioning(false);
+        }}
+      />
 
       <ChordPicker
         visible={target !== null}
@@ -152,7 +220,7 @@ function Line({
 
   if (source.startsWith('{start_of_tab')) {
     return (
-      <Pressable onPress={onTab} style={styles.tabRow}>
+      <Pressable onPress={onTab} onLongPress={onEdit} style={styles.tabRow}>
         <Text variant="caption" tone="accent">
           {source} — tap to edit
         </Text>
@@ -161,11 +229,14 @@ function Line({
   }
 
   if (node === undefined || node.kind !== 'lyric') {
-    // Directives, tab blocks and blank lines are structure, edited in the raw editor.
+    // Metadata and fences are structure. Long-press still reaches the line menu, so a
+    // section can be removed without dropping into the raw editor.
     return (
-      <Text variant="caption" tone="textMuted" style={{ marginBottom: space.xs }}>
-        {source === '' ? ' ' : source}
-      </Text>
+      <Pressable onLongPress={onEdit} style={styles.tabRow}>
+        <Text variant="caption" tone="textMuted">
+          {source === '' ? ' ' : source}
+        </Text>
+      </Pressable>
     );
   }
 
