@@ -121,6 +121,23 @@ describe('Library', () => {
     expect((await library.snapshot()).notes).toHaveLength(1);
   });
 
+  it('adds a note whose body is composed against its own fresh id', async () => {
+    const id = await library.addNote('Imported', (fresh) => `{x_qtdn_id: ${fresh}}\n{title: Wave}`);
+
+    const note = await library.readNote(id, 'Imported');
+    expect(note.source).toBe(`{x_qtdn_id: ${id}}\n{title: Wave}`);
+    expect(note.title).toBe('Wave');
+  });
+
+  it('gives every added note a distinct id, so importing twice keeps both', async () => {
+    const body = (fresh: string) => `{x_qtdn_id: ${fresh}}\n{title: Wave}`;
+    const first = await library.addNote(null, body);
+    const second = await library.addNote(null, body);
+
+    expect(first).not.toBe(second);
+    expect((await library.snapshot()).notes).toHaveLength(2);
+  });
+
   it('refuses folder names that could escape the library root', async () => {
     for (const name of ['../escape', 'a/b', '..', '', '   ']) {
       await expect(library.createFolder(name)).rejects.toThrow('not a valid folder name');
