@@ -1,8 +1,13 @@
 export { Button } from './Button';
 export { ChartView } from './ChartView';
 export { ChordPicker } from './ChordPicker';
+export { ConfirmSheet } from './ConfirmSheet';
 export { EmptyState } from './EmptyState';
 export { ListRow } from './ListRow';
+export { OptionSheet } from './OptionSheet';
+export type { Option } from './OptionSheet';
+export { PromptSheet } from './PromptSheet';
 export { Screen } from './Screen';
+export { Sheet } from './Sheet';
 export { Text } from './Text';
 export { TextField } from './TextField';

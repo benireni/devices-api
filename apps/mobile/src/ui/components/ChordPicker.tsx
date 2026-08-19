@@ -13,10 +13,11 @@ import {
   type ChordSpec,
 } from '@qtdn/chordpro';
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { color, radius, space } from '../tokens';
 import { Button } from './Button';
+import { Sheet } from './Sheet';
 import { Text } from './Text';
 
 export interface ChordPickerProps {
@@ -63,134 +64,116 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onDismiss}>
-      <View style={styles.container}>
-        {/*
-          The backdrop is a sibling of the sheet, not its parent. Nesting them meant every
-          press inside the sheet bubbled out and dismissed it, so choosing a chord closed
-          the picker before you could choose anything else.
-        */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss"
-          style={StyleSheet.absoluteFill}
-          onPress={onDismiss}
-        />
-        <View style={styles.sheet}>
-          <View style={styles.header}>
-            <Text variant="heading" tone="chord">
-              {symbol}
-            </Text>
-            <Text variant="caption" tone="textMuted">
-              over “{word}”
-            </Text>
-          </View>
-
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <Row label="Root">
-              {NOTES.map((note) => (
-                <Chip
-                  key={note}
-                  label={note}
-                  selected={note === spec.root}
-                  onPress={() => {
-                    patch({ root: note });
-                  }}
-                />
-              ))}
-            </Row>
-
-            <Row label="Quality">
-              {QUALITIES.map((quality) => (
-                <Chip
-                  key={quality || 'major'}
-                  label={quality === '' ? 'major' : quality}
-                  selected={quality === spec.quality}
-                  onPress={() => {
-                    patch({ quality });
-                  }}
-                />
-              ))}
-            </Row>
-
-            <Row label="Seventh">
-              {SEVENTHS.map((seventh) => (
-                <Chip
-                  key={seventh || 'none'}
-                  label={seventh === '' ? '—' : seventh}
-                  selected={seventh === spec.seventh}
-                  disabled={!options.sevenths.includes(seventh)}
-                  onPress={() => {
-                    patch({ seventh });
-                  }}
-                />
-              ))}
-            </Row>
-
-            <Row label="Suspension">
-              {SUSPENSIONS.map((sus) => (
-                <Chip
-                  key={sus || 'none'}
-                  label={sus === '' ? '—' : sus}
-                  selected={sus === spec.sus}
-                  disabled={!options.suspensions.includes(sus)}
-                  onPress={() => {
-                    patch({ sus });
-                  }}
-                />
-              ))}
-            </Row>
-
-            <Row label="Tensions">
-              {TENSIONS.map((tension) => (
-                <Chip
-                  key={tension}
-                  label={tension}
-                  selected={spec.tensions.includes(tension)}
-                  disabled={!options.tensions.includes(tension)}
-                  onPress={() => {
-                    commit(toggleTension(spec, tension));
-                  }}
-                />
-              ))}
-            </Row>
-
-            <Row label="Bass">
-              <Chip
-                label="—"
-                selected={spec.bass === null}
-                onPress={() => {
-                  patch({ bass: null });
-                }}
-              />
-              {NOTES.map((note) => (
-                <Chip
-                  key={note}
-                  label={note}
-                  selected={note === spec.bass}
-                  onPress={() => {
-                    patch({ bass: note });
-                  }}
-                />
-              ))}
-            </Row>
-          </ScrollView>
-
-          <View style={styles.actions}>
-            <Button
-              label="Remove"
-              variant="danger"
+    <Sheet
+      visible={visible}
+      title={symbol}
+      subtitle={`over “${word}”`}
+      onDismiss={onDismiss}
+      actions={
+        <>
+          <Button
+            label="Remove"
+            variant="danger"
+            onPress={() => {
+              onSelect(null);
+              onDismiss();
+            }}
+            style={{ flex: 1 }}
+          />
+          <Button label="Done" variant="primary" onPress={onDismiss} style={{ flex: 1 }} />
+        </>
+      }
+    >
+      <ScrollView showsVerticalScrollIndicator={false}>
+        <Row label="Root">
+          {NOTES.map((note) => (
+            <Chip
+              key={note}
+              label={note}
+              selected={note === spec.root}
               onPress={() => {
-                onSelect(null);
-                onDismiss();
+                patch({ root: note });
               }}
-              style={{ flex: 1 }}
             />
-            <Button label="Done" variant="primary" onPress={onDismiss} style={{ flex: 1 }} />
-          </View>
-        </View>
-      </View>
-    </Modal>
+          ))}
+        </Row>
+
+        <Row label="Quality">
+          {QUALITIES.map((quality) => (
+            <Chip
+              key={quality || 'major'}
+              label={quality === '' ? 'major' : quality}
+              selected={quality === spec.quality}
+              onPress={() => {
+                patch({ quality });
+              }}
+            />
+          ))}
+        </Row>
+
+        <Row label="Seventh">
+          {SEVENTHS.map((seventh) => (
+            <Chip
+              key={seventh || 'none'}
+              label={seventh === '' ? '—' : seventh}
+              selected={seventh === spec.seventh}
+              disabled={!options.sevenths.includes(seventh)}
+              onPress={() => {
+                patch({ seventh });
+              }}
+            />
+          ))}
+        </Row>
+
+        <Row label="Suspension">
+          {SUSPENSIONS.map((sus) => (
+            <Chip
+              key={sus || 'none'}
+              label={sus === '' ? '—' : sus}
+              selected={sus === spec.sus}
+              disabled={!options.suspensions.includes(sus)}
+              onPress={() => {
+                patch({ sus });
+              }}
+            />
+          ))}
+        </Row>
+
+        <Row label="Tensions">
+          {TENSIONS.map((tension) => (
+            <Chip
+              key={tension}
+              label={tension}
+              selected={spec.tensions.includes(tension)}
+              disabled={!options.tensions.includes(tension)}
+              onPress={() => {
+                commit(toggleTension(spec, tension));
+              }}
+            />
+          ))}
+        </Row>
+
+        <Row label="Bass">
+          <Chip
+            label="—"
+            selected={spec.bass === null}
+            onPress={() => {
+              patch({ bass: null });
+            }}
+          />
+          {NOTES.map((note) => (
+            <Chip
+              key={note}
+              label={note}
+              selected={note === spec.bass}
+              onPress={() => {
+                patch({ bass: note });
+              }}
+            />
+          ))}
+        </Row>
+      </ScrollView>
+    </Sheet>
   );
 }
 
@@ -232,16 +215,6 @@ function Chip({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'flex-end', backgroundColor: color.backdrop },
-  sheet: {
-    backgroundColor: color.surface,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    padding: space.lg,
-    gap: space.md,
-    maxHeight: '80%',
-  },
-  header: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm },
   rowBlock: { gap: space.sm, marginBottom: space.lg },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   chip: {
@@ -258,5 +231,4 @@ const styles = StyleSheet.create({
   // Shown rather than hidden: a row that changes length as you select is disorienting,
   // and seeing that `7M` exists but is unavailable on a diminished chord is informative.
   chipDisabled: { opacity: 0.3 },
-  actions: { flexDirection: 'row', gap: space.md },
 });
