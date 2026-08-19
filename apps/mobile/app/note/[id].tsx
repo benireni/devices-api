@@ -1,4 +1,4 @@
-import { getDirective, parse, serialize, setDirective } from '@qtdn/chordpro';
+import { chordsUsed, getDirective, parse, serialize, setDirective } from '@qtdn/chordpro';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -11,6 +11,7 @@ import { DEFAULT_SPEED, adjustSpeed, readSpeed } from '@/player/scroll';
 import { useAutoScroll } from '@/player/useAutoScroll';
 import {
   ChartView,
+  ChordStrip,
   Button,
   ConfirmSheet,
   OptionSheet,
@@ -98,6 +99,7 @@ export default function NoteScreen() {
               {note.artist}
             </Text>
           )}
+          <ChordStrip chords={chordsUsed(chart)} />
           <ChartView chart={chart} />
           <View style={styles.actions}>
             <Button

@@ -1,6 +1,8 @@
 export { Button } from './Button';
 export { ChartView } from './ChartView';
+export { ChordDiagram } from './ChordDiagram';
 export { ChordPicker } from './ChordPicker';
+export { ChordStrip } from './ChordStrip';
 export { ConfirmSheet } from './ConfirmSheet';
 export { EmptyState } from './EmptyState';
 export { ListRow } from './ListRow';

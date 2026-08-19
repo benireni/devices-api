@@ -28,6 +28,8 @@ export {
   update,
 } from './chord';
 export type { ChordOptions, ChordSpec, Quality, Seventh, Suspension } from './chord';
+export { DIAGRAM_STRINGS, fingering, shapeKey } from './fingering';
+export type { Fingering, ShapeKey } from './fingering';
 export { compose, decompose, setChordAt, setDirective, setText, words } from './edit';
 export type { Word } from './edit';
 export {
