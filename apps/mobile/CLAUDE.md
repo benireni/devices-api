@@ -14,9 +14,8 @@ An installed app is a native shell plus that bundle. In development the bundle i
 from your machine with fast refresh; in a release build it is embedded in the `.ipa`.
 
 **Expo Go works today, and will stop working.** Expo Go is a pre-built sandbox containing
-a fixed set of native modules. Every dependency qtdn currently has — including
-`expo-sqlite` — is in that set, so scanning a QR code is the fastest route to a phone
-right now.
+a fixed set of native modules. Every dependency qtdn currently has is in that set, so scanning a QR
+code is the fastest route to a phone right now.
 
 The Voice Memos **share extension** is what ends this. Expo Go cannot host a native module
 it was not built with, so at that point qtdn moves to a **development build**: our own
@@ -27,7 +26,7 @@ npm start --workspace @qtdn/mobile      # dev server — Expo Go or a dev build
 npm run ios --workspace @qtdn/mobile    # compile and install a dev build
 ```
 
-Do not cite SQLite as a reason for the dev build; it is not one.
+Do not cite SQLite as a reason for the dev build; the app does not even use it.
 
 Native projects are generated, not hand-edited. `app.json` is the source of truth and
 `expo prebuild` regenerates `ios/`. Never edit generated Xcode files — the change will be
@@ -50,8 +49,15 @@ so `from './parse'` is the form that works in Metro, tsc and Vitest alike.
 is the shell. Give every screen a real title via `<Stack.Screen options={{ title }} />`,
 or it falls back to the file name.
 
-- `app/index.tsx` — placeholder song screen; the folder list replaces it in Phase 1.
+- `app/index.tsx` — the library: folders and unfiled notes.
+- `app/folder/[name].tsx` — notes in one folder.
+- `app/note/[id].tsx` — the reading and playing surface.
+- `app/edit/[id].tsx` — the raw ChordPro editor, the escape hatch rather than the
+  primary path.
 - `app/gallery.tsx` — the component gallery. Grow the component set here first.
+
+Screens take `?folder=` as a query parameter because a note's folder is part of its path
+on disk. Data rules live in `src/data/CLAUDE.md`.
 
 ## Fonts
 

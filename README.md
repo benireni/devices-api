@@ -79,6 +79,8 @@ The gallery route renders every token and component in one place, so the visual 
 can be judged as a set rather than one screen at a time. When the component set grows, it
 grows here first.
 
-| Song screen | Component gallery |
-|---|---|
-| ![Song screen](docs/images/screen-song.png) | ![Component set](docs/images/component-set.png) |
+| Library | Folder | Note | Raw editor |
+|---|---|---|---|
+| ![Library](docs/images/screen-library.png) | ![Folder](docs/images/screen-folder.png) | ![Note](docs/images/screen-note.png) | ![Editor](docs/images/screen-editor.png) |
+
+![Component set](docs/images/component-set.png)

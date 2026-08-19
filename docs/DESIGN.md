@@ -66,12 +66,12 @@ marketplace, not a DAW. No accounts, no server, no network calls.
 |---|---|
 | Runtime | Expo SDK, dev builds (not Expo Go — native modules required) |
 | Language | TypeScript, `strict: true`, no implicit `any` |
-| Local store | `expo-sqlite` |
+| Local store | Plain files. SQLite deferred until search or scale needs it — see §5.3 |
 | Files access | `expo-document-picker` |
 | Voice Memos intake | `expo-share-extension` (registers qtdn as a share target) |
 | Audio playback | `expo-audio` |
 | Navigation | `expo-router` |
-| State | Zustand + repository layer. No global ORM magic. |
+| State | None yet. Screens re-read the library on focus; add a store when a scan is slow |
 | Testing | Vitest for `domain/` and `data/`, Maestro for iOS flows |
 | Crash reporting | `@sentry/react-native` |
 | Chord shapes | `@tombatossals/chords-db` (MIT, JSON guitar shape dataset) |
@@ -203,6 +203,12 @@ these holding. If they break, notes silently corrupt on save.
 
 SQLite is a **derived index**, rebuildable from the files at any time. This is what makes
 the app debuggable: if the database is ever wrong, delete it and reindex.
+
+**Not built in Phase 1.** The library scans the filesystem directly, which is instant at
+this size and removes an entire failure mode: with no second copy of the data, nothing can
+disagree with the files. The schema below is the target for when full-text search or a
+library too large to scan at launch actually arrives — at which point it lands additively,
+because the files stay authoritative either way.
 
 ```sql
 CREATE TABLE folders (
