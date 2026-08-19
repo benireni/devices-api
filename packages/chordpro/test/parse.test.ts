@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parse, serialize } from '../src/index';
+import { chordsUsed, parse, serialize } from '../src/index';
 
 describe('parse', () => {
   it('attaches chords to the text that follows them', () => {
@@ -89,6 +89,42 @@ describe('parse', () => {
 
     expect(diagnostics[0]?.code).toBe('unmatched-section-end');
     expect(serialize(chart)).toBe('{end_of_chorus}');
+  });
+
+  it('keeps extended chord symbols exactly as written', () => {
+    // Jazz charts are the demanding case: parentheses, alterations, non-ASCII degree
+    // signs and slash bass notes all have to survive untouched, because the chord is
+    // opaque text to the parser and only the brackets are structure.
+    const symbols = [
+      'Cm7(b9)',
+      'D°',
+      'G7(#11)',
+      'Fmaj7(9)',
+      'Bm7(b5)',
+      'A7(b13)',
+      'Dm7/G',
+      'C6/9',
+      'Eb7(#9)',
+      'F#m7(11)',
+      'G+',
+      'Adim7',
+    ];
+
+    for (const symbol of symbols) {
+      const source = `[${symbol}]uma sílaba`;
+      const { chart, diagnostics } = parse(source);
+
+      expect(diagnostics).toEqual([]);
+      expect(chart.nodes).toEqual([
+        { kind: 'lyric', segments: [{ chord: symbol, text: 'uma sílaba' }] },
+      ]);
+      expect(serialize(chart)).toBe(source);
+    }
+  });
+
+  it('collects extended chords for a diagram strip without mangling them', () => {
+    const { chart } = parse('[Fmaj7(9)]a [G7(b13)]b [Fmaj7(9)]c');
+    expect(chordsUsed(chart)).toEqual(['Fmaj7(9)', 'G7(b13)']);
   });
 
   it('reports an unclosed tab block and keeps its lines', () => {

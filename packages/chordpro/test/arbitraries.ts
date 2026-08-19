@@ -13,7 +13,34 @@ import type { Chart, Node, Segment } from '../src/index';
 
 const ROOTS = Array.from('ABCDEFG');
 const ACCIDENTALS = ['', '#', 'b'];
-const QUALITIES = ['', 'm', '7', 'm7', 'maj7', 'sus2', 'sus4', 'dim', 'aug'];
+const QUALITIES = [
+  '',
+  'm',
+  '7',
+  'm7',
+  'maj7',
+  'sus2',
+  'sus4',
+  'dim',
+  'aug',
+  // Extended and altered forms. Parentheses, alterations and the degree sign are the
+  // shapes a jazz chart actually contains, so the round-trip property has to cover them.
+  '6',
+  'm6',
+  '6/9',
+  'maj7(9)',
+  'm7(b5)',
+  '7(b9)',
+  '7(#9)',
+  '7(#11)',
+  '7(13)',
+  '7(b13)',
+  'm7(11)',
+  'm(maj7)',
+  '°',
+  'dim7',
+  '+',
+];
 
 const LYRIC_CHARS = Array.from('abcdefghijklmnopqrstuvwxyzáéíóúãõç ,.!?\'-');
 const NAME_CHARS = Array.from('abcdefghijklmnopqrstuvwxyz_');
