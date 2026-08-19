@@ -60,6 +60,35 @@ repaired section terminator). That is expected; parsing the normalized output is
 - **Nodes are readonly.** Edits produce a new tree, so the editor gets undo/redo by
   retaining previous roots.
 
+## What lives here
+
+| Module | Holds |
+|---|---|
+| `ast.ts` | The node types. Types only, no logic. |
+| `parse.ts` / `serialize.ts` | The format, and the round-trip invariant above. |
+| `edit.ts` | Operations on a lyric line, plus `setDirective`. |
+| `chord.ts` | The cifra vocabulary: building, reading and validating a symbol. |
+| `fingering.ts` | Movable shapes, and the fret a chord's root falls on. |
+| `tab.ts` | The tab grid, and reading ASCII tab back into one. |
+| `query.ts` | Read-only accessors over a chart. |
+
+All of it is pure. Anything needing a device belongs in `apps/mobile`.
+
+## Two rules the modules share
+
+**Refuse rather than guess.** `parseChord` returns `null` for a symbol outside the
+vocabulary, `parseTabGrid` returns `null` for tab this editor did not write, and
+`fingering` returns `null` where no honest shape exists. Each could have produced a near
+miss instead — the nearest representable chord, a reflowed tab, a plain shape under an
+altered symbol — and each would have quietly corrupted or misinformed. A `null` the UI has
+to handle is the cheaper failure.
+
+**Model so the impossible cannot be written.** A tab row carries its own string name
+rather than implying it by position. The chord builder's rows constrain each other, so
+`C°7M` is unreachable. Where a lookup cannot miss, the table is typed as complete. This is
+also how coverage stays at 100% without arguing about it: an unreachable branch is usually
+a sign the model is looser than the domain.
+
 ## Extending
 
 - **New qtdn directive:** add it to `QTDN_DIRECTIVES` in `src/directives.ts` and read it

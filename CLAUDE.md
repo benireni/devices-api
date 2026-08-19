@@ -3,8 +3,9 @@
 A minimalist iOS app for quick acoustic-guitar annotations: chords over lyrics, tabs, and
 short audio references, organized in folders.
 
-**Phase 0.** The note format and its parser are proven before feature work sits on them.
-The app renders one hard-coded chart to demonstrate the seam between layers.
+**v0 is complete.** Notes and folders can be created, edited, organised, played and moved
+in and out of the app. Audio and video attachments are P1 and deliberately absent, which
+is the one thing that would end Expo Go compatibility.
 
 Full rationale for every decision below lives in `docs/DESIGN.md`. Read it before
 proposing anything architectural.
@@ -19,10 +20,17 @@ one accepted exception.
 ## Layout
 
 ```
-packages/chordpro/   Pure TypeScript. The note format: AST, parser, serializer, queries.
-apps/mobile/         The Expo app.
+packages/chordpro/   Pure TypeScript. Format, chords, fingerings, tab grid, edits.
+apps/mobile/
+  src/data/          The library: files on disk, import and export.
+  src/player/        Auto-scroll.
+  src/observability/ Structured logging.
+  src/ui/            Tokens and the closed component set.
+  app/               Screens, routed by file.
 docs/                Design document, screenshots, and later ADRs.
 ```
+
+Each of those directories has its own `CLAUDE.md` with the rules that apply there.
 
 ## Rules that must not be broken
 
