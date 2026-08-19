@@ -5,7 +5,8 @@ import { color } from '../tokens';
 import { Text } from './Text';
 
 const FRETS = 4;
-const CELL = 12;
+const CELL_WIDTH = 13;
+const CELL_HEIGHT = 18;
 
 export interface ChordDiagramProps {
   symbol: string;
@@ -30,7 +31,9 @@ export function ChordDiagram({ symbol }: ChordDiagramProps) {
         {symbol}
       </Text>
 
-      <View style={styles.board}>
+      {/* A thick line stands in for the nut, so an open shape is not mistaken for a
+          barre sitting at some unstated fret. */}
+      <View style={[styles.board, shape.baseFret === 0 && styles.atNut]}>
         {DIAGRAM_STRINGS.map((string, index) => {
           const fret = shape.frets[index] ?? null;
           return (
@@ -59,9 +62,10 @@ const styles = StyleSheet.create({
   wrap: { alignItems: 'center', gap: 2 },
   board: { flexDirection: 'row' },
   string: { alignItems: 'center' },
+  atNut: { borderTopWidth: 2, borderTopColor: color.textMuted },
   cell: {
-    width: CELL,
-    height: CELL,
+    width: CELL_WIDTH,
+    height: CELL_HEIGHT,
     borderLeftWidth: StyleSheet.hairlineWidth,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: color.border,

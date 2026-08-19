@@ -7,9 +7,10 @@ Design and rationale live in [`docs/DESIGN.md`](docs/DESIGN.md).
 
 ## Status
 
-Phase 0. The note format and its parser are proven before any feature work sits on top of
-them. The app currently renders one hard-coded chart to demonstrate the seam between the
-domain core and the component set.
+**v0 is complete.** Notes and folders can be created, edited, organised, played and moved
+in and out of the app as files. Audio and video attachments are P1 and deliberately
+absent — they are also the one thing that would end Expo Go compatibility, so until then
+the app runs by scanning a QR code.
 
 ## Layout
 
@@ -73,14 +74,24 @@ so if that invariant broke, an edit made in one mode would silently corrupt the 
 saved from another. It is tested with generated charts in
 `packages/chordpro/test/roundtrip.test.ts` and is not allowed to regress.
 
+## Screens
+
+| Library | Folder | Song |
+|---|---|---|
+| ![Library](docs/images/screen-library.png) | ![Folder](docs/images/screen-folder.png) | ![Song](docs/images/screen-note.png) |
+
+| Compose | Chord builder | Raw source |
+|---|---|---|
+| ![Compose](docs/images/screen-compose.png) | ![Chord builder](docs/images/screen-chord-builder.png) | ![Raw source](docs/images/screen-editor.png) |
+
+The song screen carries the chord diagrams for the chords it uses and an auto-scroll bar.
+Chords are placed by tapping the word they sit above and building a symbol from its parts;
+the raw editor is the escape hatch for pasting a chart off the web.
+
 ## Component set
 
 The gallery route renders every token and component in one place, so the visual language
 can be judged as a set rather than one screen at a time. When the component set grows, it
 grows here first.
-
-| Library | Folder | Note | Raw editor |
-|---|---|---|---|
-| ![Library](docs/images/screen-library.png) | ![Folder](docs/images/screen-folder.png) | ![Note](docs/images/screen-note.png) | ![Editor](docs/images/screen-editor.png) |
 
 ![Component set](docs/images/component-set.png)
