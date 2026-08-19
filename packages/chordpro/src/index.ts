@@ -13,6 +13,8 @@ export type {
   TabBlock,
 } from './ast';
 
+export { compose, decompose, setChordAt, setText, words } from './edit';
+export type { Word } from './edit';
 export { parse } from './parse';
 export { serialize } from './serialize';
 export { chordsUsed, getDirective, walk } from './query';

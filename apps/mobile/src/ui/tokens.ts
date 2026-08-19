@@ -45,6 +45,8 @@ export const color = {
   accent: IDENTITY,
   /** Destructive actions only. 7.1:1. */
   danger: '#D08A92',
+  /** Scrim behind a modal sheet. Not a text surface, so no contrast ratio applies. */
+  backdrop: 'rgba(0, 0, 0, 0.6)',
 } as const;
 
 /** 4pt base scale. Every margin and padding in the app comes from here. */

@@ -1,7 +1,7 @@
 import { parse } from '@qtdn/chordpro';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { library, type Note } from '@/data';
 import { ChartView, Button, Screen, Text } from '@/ui/components';
@@ -14,6 +14,8 @@ export default function NoteScreen() {
   useEffect(() => {
     void library.readNote(id, folder ?? null).then(setNote);
   }, [id, folder]);
+
+  const suffix = folder === undefined ? '' : `?folder=${folder}`;
 
   const chart = useMemo(() => (note === null ? null : parse(note.source).chart), [note]);
 
@@ -31,13 +33,23 @@ export default function NoteScreen() {
             </Text>
           )}
           <ChartView chart={chart} />
-          <Button
-            label="Edit source"
-            onPress={() => {
-              router.push(`/edit/${id}${folder === undefined ? '' : `?folder=${folder}`}`);
-            }}
-            style={{ marginTop: space.xl }}
-          />
+          <View style={styles.actions}>
+            <Button
+              label="Edit"
+              variant="primary"
+              onPress={() => {
+                router.push(`/compose/${id}${suffix}`);
+              }}
+              style={{ flex: 1 }}
+            />
+            <Button
+              label="Source"
+              onPress={() => {
+                router.push(`/edit/${id}${suffix}`);
+              }}
+              style={{ flex: 1 }}
+            />
+          </View>
         </ScrollView>
       )}
     </Screen>
@@ -46,4 +58,5 @@ export default function NoteScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: space.xxl },
+  actions: { flexDirection: 'row', gap: space.md, marginTop: space.xl },
 });
