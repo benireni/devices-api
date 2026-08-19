@@ -13,15 +13,21 @@ release). Hermes is the engine that runs it on device.
 An installed app is a native shell plus that bundle. In development the bundle is served
 from your machine with fast refresh; in a release build it is embedded in the `.ipa`.
 
-**Expo Go is not usable here.** Expo Go is a pre-built sandbox containing a fixed set of
-native modules. qtdn needs modules it does not ship — the Voice Memos share extension,
-SQLite — so we run a **development build**: our own native shell, built once, that then
-loads JS the same way.
+**Expo Go works today, and will stop working.** Expo Go is a pre-built sandbox containing
+a fixed set of native modules. Every dependency qtdn currently has — including
+`expo-sqlite` — is in that set, so scanning a QR code is the fastest route to a phone
+right now.
+
+The Voice Memos **share extension** is what ends this. Expo Go cannot host a native module
+it was not built with, so at that point qtdn moves to a **development build**: our own
+native shell, built once, that then loads JS the same way.
 
 ```bash
-npm start --workspace @qtdn/mobile      # dev server
+npm start --workspace @qtdn/mobile      # dev server — Expo Go or a dev build
 npm run ios --workspace @qtdn/mobile    # compile and install a dev build
 ```
+
+Do not cite SQLite as a reason for the dev build; it is not one.
 
 Native projects are generated, not hand-edited. `app.json` is the source of truth and
 `expo prebuild` regenerates `ios/`. Never edit generated Xcode files — the change will be

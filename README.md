@@ -33,9 +33,13 @@ npm run check          # lint, typecheck and unit tests
 npm start --workspace @qtdn/mobile
 ```
 
-Expo Go is not usable here: qtdn needs native modules (share extension, SQLite), so it
-runs as a development build. `npm run ios --workspace @qtdn/mobile` compiles and installs
-one on a simulator or a connected device.
+**Today, Expo Go works.** Every current dependency ships inside it, so the fastest way
+onto a phone is `npm start --workspace @qtdn/mobile` and scanning the QR code.
+
+That stops being true the moment the Voice Memos share extension lands, since Expo Go
+cannot host a native module it wasn't built with. From then on qtdn needs a development
+build: `npm run ios --workspace @qtdn/mobile` compiles and installs one on a simulator or
+a connected device.
 
 ## Commands
 
