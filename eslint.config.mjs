@@ -75,7 +75,7 @@ export default tseslint.config(
 
   {
     name: 'qtdn/tests',
-    files: ['**/test/**/*.ts'],
+    files: ['**/test/**/*.ts', '**/__tests__/**/*.ts'],
     rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },
 
