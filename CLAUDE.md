@@ -37,6 +37,8 @@ docs/                Design document, screenshots, and later ADRs.
    rebuildable at any time. Never make the database authoritative.
 4. **Colors come from tokens.** `apps/mobile/src/ui/tokens.ts` is the only file allowed to
    contain a color literal. Enforced by lint.
+5. **Coverage is 100%**, on lines, statements, functions and branches, for the domain core
+   and the data layer. CI fails below it.
 
 ## Out of scope — do not build these
 
@@ -48,6 +50,23 @@ Adding these "while we're here" is the failure mode this section exists to preve
   carries ownership columns and tombstones so these land additively in later phases.
 - **Android, web client.** iOS-first. Keep code platform-agnostic where it is free to do
   so, but do not build for other platforms.
+
+## Coverage
+
+The 100% bar is not about the number. It is a forcing function: every gap found so far has
+been a branch that *cannot execute* — a `?? ''` behind a length check, an `if (!frame)`
+after `length > 0`. Each one was deleted by restructuring the code rather than chased with
+a test that could not be written.
+
+So when coverage fails, the first question is "is this branch reachable?". If it is not,
+remove it. If it is, test it. **Lowering the threshold is not the third option.**
+
+Only three things are excluded, and all three have no logic to cover: type-only files, the
+composition root, and the Expo filesystem binding, which cannot run under Node. Adding to
+that list needs the same justification — no logic, not merely inconvenient to reach.
+
+Screens and components are deliberately outside coverage. They are reviewed by looking at
+them, which is what `app/gallery.tsx` and the screenshots in `docs/images/` are for.
 
 ## Commands
 

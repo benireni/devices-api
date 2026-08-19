@@ -27,28 +27,40 @@ interface Frame {
 }
 
 class Parser {
-  private readonly lines: string[];
+  /** Remaining input. Lines are consumed from the front by {@link next}. */
+  private readonly pending: string[];
   private readonly diagnostics: Diagnostic[] = [];
   private readonly root: Node[] = [];
   private readonly stack: Frame[] = [];
-  private index = 0;
+  private lineNo = 0;
 
   constructor(source: string) {
-    this.lines = source.split('\n');
+    this.pending = source.split('\n');
+  }
+
+  /**
+   * The next line, or `undefined` at end of input.
+   *
+   * Consuming from a queue rather than indexing keeps "no more input" an ordinary
+   * value the caller has to handle, instead of an index check paired with a fallback
+   * that can never actually run.
+   */
+  private next(): string | undefined {
+    const raw = this.pending.shift();
+    if (raw !== undefined) {
+      this.lineNo += 1;
+    }
+    return raw;
   }
 
   run(): ParseResult {
-    while (this.index < this.lines.length) {
-      const raw = this.lines[this.index] ?? '';
-      this.index += 1;
-      this.consume(raw, this.index);
+    for (let raw = this.next(); raw !== undefined; raw = this.next()) {
+      this.consume(raw, this.lineNo);
     }
 
     // An unterminated section is repaired rather than dropped: the serializer will emit
     // the missing end directive, which is the behaviour that loses the least work.
-    while (this.stack.length > 0) {
-      const frame = this.stack.pop();
-      if (!frame) break;
+    for (let frame = this.stack.pop(); frame !== undefined; frame = this.stack.pop()) {
       this.report(frame.startLine, 'unclosed-section', `Section "${frame.name}" is never closed.`);
       this.emit({
         kind: 'section',
@@ -134,15 +146,13 @@ class Parser {
   /** Reads lines verbatim until `{end_of_tab}`. Column alignment is the content. */
   private readTabBlock(label: string | null, startLine: number): Node {
     const content: string[] = [];
-    while (this.index < this.lines.length) {
-      const raw = this.lines[this.index] ?? '';
+
+    for (let raw = this.next(); raw !== undefined; raw = this.next()) {
       const directive = parseDirective(raw);
       if (directive && sectionEndName(directive.name) === TAB_SECTION) {
-        this.index += 1;
         return { kind: 'tab', label, lines: content };
       }
       content.push(raw);
-      this.index += 1;
     }
 
     this.report(startLine, 'unclosed-tab', 'Tab block is never closed.');
@@ -159,7 +169,9 @@ class Parser {
 
       if (open === -1) {
         const text = raw.slice(cursor);
-        if (text !== '' || chord !== null || segments.length === 0) {
+        // At least one segment always results: this runs only for non-blank lines, so
+        // if no chord has been seen yet the whole line is still sitting in `text`.
+        if (text !== '' || chord !== null) {
           segments.push({ chord, text });
         }
         return { kind: 'lyric', segments };

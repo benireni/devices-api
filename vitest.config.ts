@@ -11,13 +11,15 @@ export default defineConfig({
       // Files with no logic to cover. Excluding them keeps the threshold a real measure
       // of tested behaviour rather than something to be lowered until it passes.
       exclude: [
+        '**/__tests__/**', // tests are not the subject of measurement
         '**/ast.ts', // type declarations
         '**/ports.ts', // interfaces
-        '**/demo.ts', // fixture data for the web build
         'apps/mobile/src/data/index.ts', // composition root
         '**/adapters/expoFileStore.ts', // platform binding; cannot run under Node
       ],
-      thresholds: { lines: 90, functions: 90, branches: 85, statements: 90 },
+      // 100% across the board. Every gap so far has been an unreachable branch worth
+      // deleting rather than a test worth writing, so the bar stays here.
+      thresholds: { lines: 100, functions: 100, branches: 100, statements: 100 },
     },
   },
 });

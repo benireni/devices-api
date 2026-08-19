@@ -2,18 +2,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import { MemoryFileStore } from '../adapters/memoryFileStore';
 import { Library } from '../library';
-import type { Environment } from '../ports';
+import { deterministicEnvironment } from './deterministic';
 
 const ROOT = '/notes';
-
-/** Deterministic: ids are reproducible, so failures are too. */
-function environment(): Environment {
-  let tick = 0;
-  return {
-    now: () => 1_700_000_000_000 + tick++,
-    randomBytes: (count) => new Uint8Array(count).fill(0xab),
-  };
-}
 
 describe('Library', () => {
   let files: MemoryFileStore;
@@ -21,7 +12,7 @@ describe('Library', () => {
 
   beforeEach(() => {
     files = new MemoryFileStore();
-    library = new Library(files, environment(), ROOT);
+    library = new Library(files, deterministicEnvironment(), ROOT);
   });
 
   it('starts empty', async () => {
@@ -89,6 +80,45 @@ describe('Library', () => {
     await library.deleteFolder('Scratch');
 
     expect(await library.snapshot()).toEqual({ folders: [], notes: [] });
+  });
+
+  it('deletes a note without touching its neighbours', async () => {
+    const doomed = await library.createNote(null, 'Doomed');
+    const kept = await library.createNote(null, 'Kept');
+
+    await library.deleteNote(doomed, null);
+
+    expect((await library.snapshot()).notes.map((n) => n.id)).toEqual([kept]);
+  });
+
+  it('returns folders in locale order rather than filesystem order', async () => {
+    for (const name of ['Zzz', 'Ácido', 'abacaxi', 'Beta']) {
+      await library.createFolder(name);
+    }
+
+    const { folders } = await library.snapshot();
+    expect(folders.map((f) => f.name)).toEqual(['abacaxi', 'Ácido', 'Beta', 'Zzz']);
+  });
+
+  it('moving a note to the folder it is already in does nothing', async () => {
+    const id = await library.createNote(null, 'Song');
+    await library.moveNote(id, null, null);
+
+    expect((await library.snapshot()).notes[0]).toMatchObject({ id, folder: null });
+  });
+
+  it('renaming a folder to its current name does nothing', async () => {
+    await library.createFolder('Same');
+    await library.renameFolder('Same', 'Same');
+
+    expect((await library.snapshot()).folders).toEqual([{ name: 'Same', noteCount: 0 }]);
+  });
+
+  it('ignores files that are not notes', async () => {
+    await files.write(`${ROOT}/stray.txt`, 'not a note');
+    await library.createNote(null, 'Real');
+
+    expect((await library.snapshot()).notes).toHaveLength(1);
   });
 
   it('refuses folder names that could escape the library root', async () => {

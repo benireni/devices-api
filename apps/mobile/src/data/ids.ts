@@ -15,24 +15,19 @@ export function uuidv7(nowMs: number, random: Uint8Array): string {
   }
 
   const bytes = new Uint8Array(16);
+  const view = new DataView(bytes.buffer);
 
   // 48-bit timestamp. Split to stay inside the 32-bit range of bitwise operators.
   const millis = Math.floor(nowMs);
-  const high = Math.floor(millis / 0x1_0000_0000);
-  const low = millis >>> 0;
-  bytes[0] = (high >>> 8) & 0xff;
-  bytes[1] = high & 0xff;
-  bytes[2] = (low >>> 24) & 0xff;
-  bytes[3] = (low >>> 16) & 0xff;
-  bytes[4] = (low >>> 8) & 0xff;
-  bytes[5] = low & 0xff;
+  view.setUint16(0, Math.floor(millis / 0x1_0000_0000));
+  view.setUint32(2, millis >>> 0);
 
-  for (let i = 0; i < 10; i += 1) {
-    bytes[6 + i] = random[i] ?? 0;
-  }
+  bytes.set(random.subarray(0, 10), 6);
 
-  bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x70; // version 7
-  bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80; // variant 10
+  // DataView reads return a number rather than number | undefined, which keeps these
+  // free of the unreachable `?? 0` branches that indexed access would require.
+  view.setUint8(6, (view.getUint8(6) & 0x0f) | 0x70); // version 7
+  view.setUint8(8, (view.getUint8(8) & 0x3f) | 0x80); // variant 10
 
   const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
   return [

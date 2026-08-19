@@ -73,9 +73,17 @@ export class MemoryFileStore implements FileStore {
       return;
     }
 
-    this.directories.add(to);
-    this.directories.delete(from);
     const prefix = `${from}/`;
+    this.directories.delete(from);
+    this.directories.add(to);
+
+    for (const dir of [...this.directories]) {
+      if (dir.startsWith(prefix)) {
+        this.directories.add(`${to}/${dir.slice(prefix.length)}`);
+        this.directories.delete(dir);
+      }
+    }
+
     for (const [key, value] of [...this.entries]) {
       if (key.startsWith(prefix)) {
         this.entries.set(`${to}/${key.slice(prefix.length)}`, value);

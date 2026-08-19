@@ -91,6 +91,15 @@ describe('parse', () => {
     expect(serialize(chart)).toBe('{end_of_chorus}');
   });
 
+  it('reports an unclosed tab block and keeps its lines', () => {
+    const { chart, diagnostics } = parse('{start_of_tab: Intro}\ne|--0--|');
+
+    expect(diagnostics).toEqual([
+      { line: 1, code: 'unclosed-tab', message: 'Tab block is never closed.' },
+    ]);
+    expect(chart.nodes).toEqual([{ kind: 'tab', label: 'Intro', lines: ['e|--0--|'] }]);
+  });
+
   it('never throws on arbitrary input', () => {
     for (const input of ['', '{', '}', '{}', '[', ']', '#', '{:}', '{start_of_}']) {
       expect(() => parse(input)).not.toThrow();
