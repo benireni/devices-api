@@ -2,6 +2,8 @@ import { Stack, router } from 'expo-router';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { library } from '@/data';
+import { importNote } from '@/data/share';
+import { log } from '@/observability';
 import { useLibrary } from '@/hooks/useLibrary';
 import { Button, EmptyState, ListRow, Screen, Text } from '@/ui/components';
 import { space } from '@/ui/tokens';
@@ -10,6 +12,16 @@ export default function LibraryScreen() {
   const { snapshot, loading, reload } = useLibrary();
   const unfiled = snapshot.notes.filter((note) => note.folder === null);
   const isEmpty = snapshot.folders.length === 0 && unfiled.length === 0;
+
+  async function importFile() {
+    try {
+      const id = await importNote(null);
+      await reload();
+      if (id !== null) router.push(`/note/${id}`);
+    } catch (cause) {
+      log.error('note.import.failed', cause);
+    }
+  }
 
   async function newNote() {
     const id = await library.createNote(null, 'Untitled');
@@ -59,7 +71,14 @@ export default function LibraryScreen() {
 
       <View style={styles.actions}>
         <Button
-          label="New folder"
+          label="Import"
+          onPress={() => {
+            void importFile();
+          }}
+          style={{ flex: 1 }}
+        />
+        <Button
+          label="Folder"
           onPress={() => {
             router.push('/new-folder');
           }}

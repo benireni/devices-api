@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { library, type Note } from '@/data';
+import { shareNote } from '@/data/share';
 import { useLibrary } from '@/hooks/useLibrary';
 import { log } from '@/observability';
 import { DEFAULT_SPEED, adjustSpeed, readSpeed } from '@/player/scroll';
@@ -122,6 +123,13 @@ export default function NoteScreen() {
               disabled={destinations.length === 0}
               onPress={() => {
                 setMoving(true);
+              }}
+              style={{ flex: 1 }}
+            />
+            <Button
+              label="Share"
+              onPress={() => {
+                void shareNote(note.title, note.source);
               }}
               style={{ flex: 1 }}
             />

@@ -17,6 +17,9 @@ import type { Environment, FileStore } from './ports';
 
 const EXTENSION = '.chordpro';
 
+/** The directive carrying a note's identity, shared with import. */
+export const QTDN_ID = QTDN_DIRECTIVES.id;
+
 export interface NoteSummary {
   readonly id: string;
   readonly title: string;
@@ -71,6 +74,14 @@ export class Library {
   async readNote(id: string, folder: string | null): Promise<Note> {
     const source = await this.files.read(this.notePath(id, folder));
     return { ...summarize(id, folder, source), source };
+  }
+
+  /** Writes an already-composed note under a fresh id, as import does. */
+  async addNote(folder: string | null, source: (id: string) => string): Promise<string> {
+    const id = uuidv7(this.env.now(), this.env.randomBytes(10));
+    await this.ensureFolder(folder);
+    await this.files.write(this.notePath(id, folder), source(id));
+    return id;
   }
 
   /** Creates an empty note and returns its id. Title is written as a directive. */

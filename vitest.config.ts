@@ -23,6 +23,7 @@ export default defineConfig({
         'apps/mobile/src/observability/index.ts', // composition root
         '**/adapters/expoFileStore.ts', // platform binding; cannot run under Node
         '**/useAutoScroll.ts', // platform binding: animation frames, refs, keep-awake
+        'apps/mobile/src/data/share.ts', // platform binding: share sheet and document picker
       ],
       // 100% across the board. Every gap so far has been an unreachable branch worth
       // deleting rather than a test worth writing, so the bar stays here.
