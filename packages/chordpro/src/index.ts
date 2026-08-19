@@ -30,6 +30,16 @@ export {
 export type { ChordOptions, ChordSpec, Quality, Seventh, Suspension } from './chord';
 export { compose, decompose, setChordAt, setDirective, setText, words } from './edit';
 export type { Word } from './edit';
+export {
+  STRINGS,
+  addColumn,
+  emptyTabGrid,
+  parseTabGrid,
+  removeColumn,
+  renderTabGrid,
+  setFret,
+} from './tab';
+export type { Fret, StringName, TabGrid, TabRow } from './tab';
 export { parse } from './parse';
 export { serialize } from './serialize';
 export { chordsUsed, getDirective, walk } from './query';

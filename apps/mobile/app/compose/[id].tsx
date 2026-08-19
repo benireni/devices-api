@@ -78,17 +78,31 @@ export default function ComposeScreen() {
             onWord={(offset, word) => {
               setTarget({ line: index, offset, word });
             }}
+            onTab={() => {
+              router.push(
+                `/tab/${id}?line=${String(index)}${folder === undefined ? '' : `&folder=${folder}`}`,
+              );
+            }}
           />
         ))}
 
-        <Button
-          label="Add line"
-          onPress={() => {
-            setLines((value) => [...(value ?? []), '']);
-            setEditing((lines ?? []).length);
-          }}
-          style={{ marginTop: space.lg }}
-        />
+        <View style={styles.tools}>
+          <Button
+            label="Add line"
+            onPress={() => {
+              setLines((value) => [...(value ?? []), '']);
+              setEditing((lines ?? []).length);
+            }}
+            style={{ flex: 1 }}
+          />
+          <Button
+            label="Add tab"
+            onPress={() => {
+              router.push(`/tab/${id}${folder === undefined ? '' : `?folder=${folder}`}`);
+            }}
+            style={{ flex: 1 }}
+          />
+        </View>
       </ScrollView>
 
       <View style={styles.footer}>
@@ -121,18 +135,30 @@ function Line({
   onEdit,
   onEditDone,
   onWord,
+  onTab,
 }: {
   source: string;
   editing: boolean;
   onEdit: () => void;
   onEditDone: (text: string) => void;
   onWord: (offset: number, word: string) => void;
+  onTab: () => void;
 }) {
   if (editing) {
     return <LineEditor initial={plainText(source)} onDone={onEditDone} />;
   }
 
   const node = parse(source).chart.nodes[0];
+
+  if (source.startsWith('{start_of_tab')) {
+    return (
+      <Pressable onPress={onTab} style={styles.tabRow}>
+        <Text variant="caption" tone="accent">
+          {source} — tap to edit
+        </Text>
+      </Pressable>
+    );
+  }
 
   if (node === undefined || node.kind !== 'lyric') {
     // Directives, tab blocks and blank lines are structure, edited in the raw editor.
@@ -202,6 +228,8 @@ function renderLine(line: LyricLine): string {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: space.xxl },
+  tools: { flexDirection: 'row', gap: space.md, marginTop: space.lg },
+  tabRow: { paddingVertical: space.xs },
   line: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: space.sm },
   word: { flexDirection: 'column', paddingRight: space.sm, minHeight: 44 },
   editor: { flexDirection: 'row', gap: space.sm, alignItems: 'center', marginBottom: space.sm },
