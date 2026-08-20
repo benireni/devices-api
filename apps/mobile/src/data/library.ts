@@ -1,6 +1,7 @@
 import { QTDN_DIRECTIVES, getDirective, parse } from '@qtdn/chordpro';
 
 import { uuidv7 } from './ids';
+import { matches } from './search';
 import type { Environment, FileStore } from './ports';
 
 /**
@@ -71,6 +72,26 @@ export class Library {
     }));
 
     return { folders, notes };
+  }
+
+  /**
+   * Notes whose title, artist or body match every term of the query.
+   *
+   * Searches the body, not just the metadata: half of finding a song is remembering one
+   * line of it. Reads each file rather than holding every body in the snapshot, which
+   * would put the whole library's text in memory to serve a list of titles.
+   */
+  async search(query: string): Promise<NoteSummary[]> {
+    const { notes } = await this.snapshot();
+
+    const found: NoteSummary[] = [];
+    for (const note of notes) {
+      const source = await this.files.read(this.notePath(note.id, note.folder));
+      if (matches(`${note.title} ${note.artist ?? ''} ${source}`, query)) {
+        found.push(note);
+      }
+    }
+    return found;
   }
 
   async readNote(id: string, folder: string | null): Promise<Note> {

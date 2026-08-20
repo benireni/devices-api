@@ -14,6 +14,7 @@ import type { Environment, FileStore } from './ports';
 export { Library } from './library';
 export { DEFAULT_ORDER, ORDERS, ORDER_LABELS, sortNotes } from './ordering';
 export type { NoteOrder } from './ordering';
+export { fold, matches } from './search';
 export type { FolderSummary, LibrarySnapshot, Note, NoteSummary } from './library';
 
 const environment: Environment = {

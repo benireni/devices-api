@@ -140,6 +140,46 @@ describe('Library', () => {
     expect((await library.snapshot()).notes).toHaveLength(2);
   });
 
+  describe('search', () => {
+    it('finds a note by its title', async () => {
+      await library.createNote(null, 'Corcovado');
+      await library.createNote(null, 'Wave');
+
+      expect((await library.search('corcovado')).map((n) => n.title)).toEqual(['Corcovado']);
+    });
+
+    it('finds a note by a line of its body, which is half of remembering a song', async () => {
+      const id = await library.createNote(null, 'Untitled song');
+      await library.saveNote(id, null, '{title: Untitled song}\n[Am6]um cantinho, um violão');
+
+      expect((await library.search('violao')).map((n) => n.title)).toEqual(['Untitled song']);
+    });
+
+    it('finds a note by its artist', async () => {
+      const id = await library.createNote(null, 'Song');
+      await library.saveNote(id, null, '{title: Song}\n{artist: Tom Jobim}');
+
+      expect((await library.search('jobim')).map((n) => n.title)).toEqual(['Song']);
+    });
+
+    it('searches inside folders too', async () => {
+      await library.createFolder('Repertório');
+      await library.createNote('Repertório', 'Insensatez');
+
+      expect((await library.search('insensatez'))).toHaveLength(1);
+    });
+
+    it('returns nothing for an empty query rather than the whole library', async () => {
+      await library.createNote(null, 'Song');
+      expect(await library.search('   ')).toEqual([]);
+    });
+
+    it('returns nothing when nothing matches', async () => {
+      await library.createNote(null, 'Song');
+      expect(await library.search('nonexistent')).toEqual([]);
+    });
+  });
+
   it('refuses folder names that could escape the library root', async () => {
     for (const name of ['../escape', 'a/b', '..', '', '   ']) {
       await expect(library.createFolder(name)).rejects.toThrow('not a valid folder name');

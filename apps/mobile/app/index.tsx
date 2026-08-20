@@ -1,17 +1,36 @@
 import { Stack, router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { ORDERS, ORDER_LABELS, library } from '@/data';
+import { ORDERS, ORDER_LABELS, library, type NoteSummary } from '@/data';
 import { importNote } from '@/data/share';
 import { log } from '@/observability';
 import { useLibrary } from '@/hooks/useLibrary';
-import { Button, EmptyState, ListRow, OptionSheet, Screen, Text } from '@/ui/components';
+import {
+  Button,
+  EmptyState,
+  ListRow,
+  OptionSheet,
+  Screen,
+  Text,
+  TextField,
+} from '@/ui/components';
 import { space } from '@/ui/tokens';
 
 export default function LibraryScreen() {
   const { snapshot, notes, order, setOrder, loading, reload } = useLibrary();
   const [ordering, setOrdering] = useState(false);
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<NoteSummary[]>([]);
+  const searching = query.trim() !== '';
+
+  useEffect(() => {
+    if (!searching) {
+      setResults([]);
+      return;
+    }
+    void library.search(query).then(setResults);
+  }, [query, searching]);
   const unfiled = notes.filter((note) => note.folder === null);
   const isEmpty = snapshot.folders.length === 0 && unfiled.length === 0;
 
@@ -35,7 +54,28 @@ export default function LibraryScreen() {
     <Screen>
       <Stack.Screen options={{ title: 'qtdn' }} />
 
-      {isEmpty && !loading ? (
+      <TextField value={query} onChangeText={setQuery} placeholder="Search notes" />
+
+      {searching ? (
+        results.length === 0 ? (
+          <EmptyState title="No matches" hint={`Nothing in the library matches “${query}”.`} />
+        ) : (
+          <ScrollView showsVerticalScrollIndicator={false} style={styles.results}>
+            {results.map((note) => (
+              <ListRow
+                key={note.id}
+                title={note.title}
+                subtitle={note.artist ?? note.folder ?? undefined}
+                onPress={() => {
+                  router.push(
+                    `/note/${note.id}${note.folder === null ? '' : `?folder=${encodeURIComponent(note.folder)}`}`,
+                  );
+                }}
+              />
+            ))}
+          </ScrollView>
+        )
+      ) : isEmpty && !loading ? (
         <EmptyState title="No notes yet" hint="Start a note, or make a folder to group them." />
       ) : (
         <ScrollView showsVerticalScrollIndicator={false}>
@@ -149,6 +189,7 @@ function Section({
 }
 
 const styles = StyleSheet.create({
+  results: { marginTop: space.lg },
   section: { marginBottom: space.xl },
   sectionHead: {
     flexDirection: 'row',
