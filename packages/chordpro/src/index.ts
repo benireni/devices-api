@@ -45,7 +45,7 @@ export type { Fret, StringName, TabGrid, TabRow } from './tab';
 export { appendSection, isFence, moveLine, removeLine, tabBody } from './lines';
 export { parse } from './parse';
 export { serialize } from './serialize';
-export { chordsUsed, getDirective, walk } from './query';
+export { chordsUsed, getDirective, plainText, walk } from './query';
 export {
   QTDN_DIRECTIVES,
   QTDN_PREFIX,

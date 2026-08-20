@@ -1,6 +1,6 @@
 import { chordsUsed, getDirective, parse, serialize, setDirective } from '@qtdn/chordpro';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { library, type Note } from '@/data';
@@ -23,6 +23,9 @@ import {
 } from '@/ui/components';
 import { space } from '@/ui/tokens';
 
+/** Long enough to absorb a run of taps, short enough to feel immediate. */
+const SETTLE_MS = 600;
+
 export default function NoteScreen() {
   const { id, folder } = useLocalSearchParams<{ id: string; folder?: string }>();
   const [note, setNote] = useState<Note | null>(null);
@@ -31,17 +34,55 @@ export default function NoteScreen() {
   const [renaming, setRenaming] = useState(false);
   const { snapshot } = useLibrary();
   const [speed, setSpeed] = useState(DEFAULT_SPEED);
+  /** The note's text as last written, so an adjustment never composes onto a stale copy. */
+  const source = useRef<string | null>(null);
+  const unsaved = useRef<string | null>(null);
+  const from = folder ?? null;
   const { running, setRunning, scroller, syncOffset } = useAutoScroll(speed);
 
   useEffect(() => {
     void library.readNote(id, folder ?? null).then((value) => {
       setNote(value);
+      source.current = value.source;
       setSpeed(readSpeed(getDirective(parse(value.source).chart, 'x_qtdn_scroll')));
     });
   }, [id, folder]);
 
+  /**
+   * Speed is a property of the song, so it is written back into the note.
+   *
+   * Persisted after the taps settle rather than on each one. Writing per tap read the
+   * note and the speed out of a stale closure, so two quick taps both computed from the
+   * same starting value and the second silently discarded the first.
+   */
+  useEffect(() => {
+    const current = source.current;
+    if (current === null) return;
+    if (readSpeed(getDirective(parse(current).chart, 'x_qtdn_scroll')) === speed) return;
+
+    const updated = serialize(setDirective(parse(current).chart, 'x_qtdn_scroll', String(speed)));
+    unsaved.current = updated;
+
+    const timer = setTimeout(() => {
+      source.current = updated;
+      unsaved.current = null;
+      void library.saveNote(id, from, updated);
+    }, SETTLE_MS);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [speed, id, from]);
+
+  /** Leaving mid-adjustment must not lose the last change the timer had not written. */
+  useEffect(
+    () => () => {
+      if (unsaved.current !== null) void library.saveNote(id, from, unsaved.current);
+    },
+    [id, from],
+  );
+
   const suffix = folder === undefined ? '' : `?folder=${folder}`;
-  const from = folder ?? null;
 
   const destinations: Option[] = [
     ...(from === null ? [] : [{ key: '', label: 'No folder' }]),
@@ -59,22 +100,10 @@ export default function NoteScreen() {
     if (note === null) return;
     const updated = serialize(setDirective(parse(note.source).chart, 'title', title.trim()));
     await library.saveNote(id, from, updated);
+    source.current = updated;
     setNote({ ...note, title: title.trim(), source: updated });
     log.info('note.renamed', { id });
     setRenaming(false);
-  }
-
-  /** Speed is a property of the song, so it is written back into the note itself. */
-  async function changeSpeed(steps: number) {
-    if (note === null) return;
-    const next = adjustSpeed(speed, steps);
-    setSpeed(next);
-
-    const updated = serialize(
-      setDirective(parse(note.source).chart, 'x_qtdn_scroll', String(next)),
-    );
-    await library.saveNote(id, from, updated);
-    setNote({ ...note, source: updated });
   }
 
   async function remove() {
@@ -178,7 +207,7 @@ export default function NoteScreen() {
             setRunning(!running);
           }}
           onAdjust={(steps) => {
-            void changeSpeed(steps);
+            setSpeed((current) => adjustSpeed(current, steps));
           }}
         />
       )}

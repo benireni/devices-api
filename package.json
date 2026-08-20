@@ -16,7 +16,9 @@
     "test:watch": "vitest",
     "check": "npm run lint && npm run typecheck && npm run test:coverage",
     "build:ios": "npm run export --workspace @qtdn/mobile",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "e2e": "npm run build:web --workspace @qtdn/mobile && node e2e/flows.mjs",
+    "latency": "vite-node e2e/latency.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",
@@ -26,6 +28,7 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "fast-check": "^3.23.1",
     "globals": "^15.15.0",
+    "playwright": "^1.62.1",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.15.0",
     "vitest": "^2.1.5"

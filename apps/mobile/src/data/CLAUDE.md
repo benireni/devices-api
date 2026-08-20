@@ -24,6 +24,22 @@ For the same reason there is no state store. `useLibrary` re-reads on screen foc
 has no cache to invalidate and no staleness to reason about. Reach for a store when a
 scan is slow, not because a screen feels like it should have one.
 
+## Cost
+
+Both operations that touch every note — the launch scan and a search — are linear in the
+library and share one pass: `scan` reads each file once and parses it once, and hands the
+summary and the chart to whichever caller asked. Reading twice, or parsing twice, is the
+mistake to watch for when adding a third reader.
+
+Measured in Node against the in-memory store (`npm run latency`), a 2000-note library
+scans in ~15ms and searches in ~46ms. A device is slower — every read is a real
+filesystem call rather than a map lookup — so treat those as a lower bound and assume
+several times that.
+
+The practical consequence: **no loading state is warranted at the sizes this app is for**.
+Revisit when a scan is measurably slow on a real device, which is the same trigger that
+brings in SQLite.
+
 ## Testing
 
 All logic lives in `Library`, which depends only on the `FileStore` port. Tests run under

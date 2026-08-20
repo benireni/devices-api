@@ -42,3 +42,37 @@ export function chordsUsed(chart: Chart): string[] {
   }
   return [...seen];
 }
+
+/**
+ * The chart's text with the notation taken out.
+ *
+ * Searching the raw source does not work: a chord splits the word it sits on, so
+ * `can[D7(b9)]ção` contains neither `canção` nor `cancao`, and the lyric becomes
+ * unfindable precisely because it carries a chord. This joins each line's segments back
+ * into the words a reader sees, and includes directive values, section labels and tab
+ * lines so nothing written in the note is unsearchable.
+ */
+export function plainText(chart: Chart): string {
+  const lines: string[] = [];
+
+  for (const node of walk(chart)) {
+    if (node.kind === 'lyric') {
+      lines.push(node.segments.map((segment) => segment.text).join(''));
+    }
+    if (node.kind === 'directive' && node.value !== null) {
+      lines.push(node.value);
+    }
+    if (node.kind === 'section' && node.label !== null) {
+      lines.push(node.label);
+    }
+    if (node.kind === 'tab') {
+      if (node.label !== null) lines.push(node.label);
+      lines.push(...node.lines);
+    }
+    if (node.kind === 'comment') {
+      lines.push(node.text);
+    }
+  }
+
+  return lines.join('\n');
+}

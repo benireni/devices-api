@@ -1,4 +1,11 @@
-import { QTDN_DIRECTIVES, getDirective, parse } from '@qtdn/chordpro';
+import {
+  QTDN_DIRECTIVES,
+  chordsUsed,
+  getDirective,
+  parse,
+  plainText,
+  type Chart,
+} from '@qtdn/chordpro';
 
 import { uuidv7 } from './ids';
 import { matches } from './search';
@@ -45,6 +52,18 @@ export interface Note extends NoteSummary {
   readonly source: string;
 }
 
+/**
+ * A note as read from disk.
+ *
+ * The parsed chart travels with the summary because both readers need it and parsing is
+ * the expensive half of a scan — summarizing and searching a note should cost one parse
+ * between them, not one each.
+ */
+interface Entry {
+  readonly summary: NoteSummary;
+  readonly chart: Chart;
+}
+
 /** Rejected folder names, so a name can never escape the library root or shadow a file. */
 const INVALID_FOLDER = /[/\\:*?"<>|]|^\.+$/;
 
@@ -57,21 +76,36 @@ export class Library {
 
   /** Scans the library from disk. Cheap at this size; the only source of truth. */
   async snapshot(): Promise<LibrarySnapshot> {
-    const folderNames = (await this.files.listDirectories(this.root)).sort((a, b) =>
+    const { folders, entries } = await this.scan();
+
+    const notes = entries.map((entry) => entry.summary);
+    return {
+      folders: folders.map((name) => ({
+        name,
+        noteCount: notes.filter((note) => note.folder === name).length,
+      })),
+      notes,
+    };
+  }
+
+  /**
+   * One pass over the library, carrying each note's text along with its summary.
+   *
+   * Both callers need the file contents — the summary is read out of them — so reading
+   * once and handing back both is the difference between search costing one pass and
+   * two.
+   */
+  private async scan(): Promise<{ folders: string[]; entries: Entry[] }> {
+    const folders = (await this.files.listDirectories(this.root)).sort((a, b) =>
       a.localeCompare(b),
     );
 
-    const notes: NoteSummary[] = [];
-    for (const folder of [null, ...folderNames]) {
-      notes.push(...(await this.readFolder(folder)));
+    const entries: Entry[] = [];
+    for (const folder of [null, ...folders]) {
+      entries.push(...(await this.readFolder(folder)));
     }
 
-    const folders = folderNames.map((name) => ({
-      name,
-      noteCount: notes.filter((note) => note.folder === name).length,
-    }));
-
-    return { folders, notes };
+    return { folders, entries };
   }
 
   /**
@@ -82,22 +116,24 @@ export class Library {
    * would put the whole library's text in memory to serve a list of titles.
    */
   async search(query: string): Promise<NoteSummary[]> {
-    const { notes } = await this.snapshot();
+    const { entries } = await this.scan();
 
-    const found: NoteSummary[] = [];
-    for (const note of notes) {
-      const source = await this.files.read(this.notePath(note.id, note.folder));
-      if (matches(`${note.title} ${note.artist ?? ''} ${source}`, query)) {
-        found.push(note);
-      }
-    }
-    return found;
+    // The words a reader sees, not the source: a chord splits the word it sits on, so
+    // searching the raw text cannot find a lyric that happens to carry one. Chord symbols
+    // are appended separately so they stay searchable in their own right.
+    return entries
+      .filter(({ chart }) => matches(`${plainText(chart)}\n${chordsUsed(chart).join(' ')}`, query))
+      .map(({ summary }) => summary);
   }
 
   async readNote(id: string, folder: string | null): Promise<Note> {
     const path = this.notePath(id, folder);
     const source = await this.files.read(path);
-    return { ...summarize(id, folder, source), updatedAt: await this.files.modifiedAt(path), source };
+    return {
+      ...summarize(id, folder, parse(source).chart),
+      updatedAt: await this.files.modifiedAt(path),
+      source,
+    };
   }
 
   /** Writes an already-composed note under a fresh id, as import does. */
@@ -168,20 +204,22 @@ export class Library {
     await this.files.remove(this.folderPath(name));
   }
 
-  private async readFolder(folder: string | null): Promise<NoteSummary[]> {
+  private async readFolder(folder: string | null): Promise<Entry[]> {
     const dir = folder === null ? this.root : this.folderPath(folder);
     const names = await this.files.listFiles(dir);
 
-    const summaries: NoteSummary[] = [];
+    const entries: Entry[] = [];
     for (const name of names.filter((n) => n.endsWith(EXTENSION)).sort()) {
       const id = name.slice(0, -EXTENSION.length);
       const path = `${dir}/${name}`;
-      summaries.push({
-        ...summarize(id, folder, await this.files.read(path)),
-        updatedAt: await this.files.modifiedAt(path),
+      const { chart } = parse(await this.files.read(path));
+
+      entries.push({
+        summary: { ...summarize(id, folder, chart), updatedAt: await this.files.modifiedAt(path) },
+        chart,
       });
     }
-    return summaries;
+    return entries;
   }
 
   private async ensureFolder(folder: string | null): Promise<void> {
@@ -209,9 +247,8 @@ export class Library {
 function summarize(
   id: string,
   folder: string | null,
-  source: string,
+  chart: Chart,
 ): Omit<NoteSummary, 'updatedAt'> {
-  const { chart } = parse(source);
   const title = getDirective(chart, 'title');
   return {
     id,

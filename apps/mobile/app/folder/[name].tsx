@@ -45,7 +45,7 @@ export default function FolderScreen() {
   async function newNote() {
     const id = await library.createNote(name, 'Untitled');
     await reload();
-    router.push(`/edit/${id}?folder=${encodeURIComponent(name)}`);
+    router.push(`/compose/${id}?folder=${encodeURIComponent(name)}`);
   }
 
   return (

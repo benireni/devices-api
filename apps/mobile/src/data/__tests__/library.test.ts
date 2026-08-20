@@ -148,6 +148,22 @@ describe('Library', () => {
       expect((await library.search('corcovado')).map((n) => n.title)).toEqual(['Corcovado']);
     });
 
+    it('finds a lyric whose word a chord was written inside', async () => {
+      // The raw source reads `can[D7(b9)]ção`, which contains neither spelling.
+      const id = await library.createNote(null, 'Corcovado');
+      await library.saveNote(id, null, '{title: Corcovado}\n[Am7(b5)]uma can[D7(b9)]ção');
+
+      expect(await library.search('cancao')).toHaveLength(1);
+      expect(await library.search('canção')).toHaveLength(1);
+    });
+
+    it('finds a note by one of its chords', async () => {
+      const id = await library.createNote(null, 'Study');
+      await library.saveNote(id, null, '{title: Study}\n[Cm7(b9)]a');
+
+      expect(await library.search('Cm7(b9)')).toHaveLength(1);
+    });
+
     it('finds a note by a line of its body, which is half of remembering a song', async () => {
       const id = await library.createNote(null, 'Untitled song');
       await library.saveNote(id, null, '{title: Untitled song}\n[Am6]um cantinho, um violão');

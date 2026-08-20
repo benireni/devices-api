@@ -47,7 +47,7 @@ export default function LibraryScreen() {
   async function newNote() {
     const id = await library.createNote(null, 'Untitled');
     await reload();
-    router.push(`/edit/${id}`);
+    router.push(`/compose/${id}`);
   }
 
   return (

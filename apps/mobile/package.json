@@ -6,7 +6,8 @@
   "scripts": {
     "start": "expo start",
     "ios": "expo run:ios",
-    "export": "expo export --platform ios --output-dir dist"
+    "export": "expo export --platform ios --output-dir dist",
+    "build:web": "expo export --platform web --output-dir dist-web --clear"
   },
   "dependencies": {
     "@expo-google-fonts/fraunces": "^0.4.1",
