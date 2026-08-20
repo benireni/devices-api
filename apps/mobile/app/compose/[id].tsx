@@ -7,10 +7,11 @@ import {
   setChordAt,
   setText,
   slots,
+  tabBody,
   type LyricLine,
 } from '@qtdn/chordpro';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { library } from '@/data';
@@ -82,6 +83,7 @@ export default function ComposeScreen() {
   }
 
   const current = target === null || lines === null ? null : lyricAt(lines, target.line);
+  const inTab = useMemo(() => tabBody(lines ?? []), [lines]);
 
   return (
     <Screen>
@@ -92,6 +94,7 @@ export default function ComposeScreen() {
           <Line
             key={index}
             source={line}
+            inTab={inTab[index] ?? false}
             editing={editing === index}
             onEdit={() => {
               setMenu(index);
@@ -215,6 +218,7 @@ export default function ComposeScreen() {
 
 function Line({
   source,
+  inTab,
   editing,
   onEdit,
   onEditDone,
@@ -222,6 +226,7 @@ function Line({
   onTab,
 }: {
   source: string;
+  inTab: boolean;
   editing: boolean;
   onEdit: () => void;
   onEditDone: (text: string) => void;
@@ -230,6 +235,18 @@ function Line({
 }) {
   if (editing) {
     return <LineEditor initial={plainText(source)} onDone={onEditDone} />;
+  }
+
+  // Tab content is not lyrics. Rendered line-by-line it would be parsed as words and
+  // offered chord slots, which is both wrong and unusable.
+  if (inTab) {
+    return (
+      <Pressable onPress={onTab} style={styles.tabBody}>
+        <Text variant="tab" tone="textMuted">
+          {source === '' ? ' ' : source}
+        </Text>
+      </Pressable>
+    );
   }
 
   const node = parse(source).chart.nodes[0];
@@ -332,6 +349,7 @@ const styles = StyleSheet.create({
   content: { paddingBottom: space.xxl },
   tools: { flexDirection: 'row', gap: space.md, marginTop: space.lg },
   tabRow: { paddingVertical: space.xs },
+  tabBody: { paddingVertical: 0 },
   line: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: space.sm },
   slot: { flexDirection: 'column', paddingRight: space.sm, minHeight: 44 },
   gap: {

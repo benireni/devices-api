@@ -1,4 +1,10 @@
-import { endDirective, sectionEndName, sectionStartName, startDirective } from './directives';
+import {
+  TAB_SECTION,
+  endDirective,
+  sectionEndName,
+  sectionStartName,
+  startDirective,
+} from './directives';
 
 /**
  * Operations on a note's source lines.
@@ -57,6 +63,33 @@ export function appendSection(
 ): string[] {
   const open = label === null ? `{${startDirective(name)}}` : `{${startDirective(name)}: ${label}}`;
   return [...lines, '', open, '', `{${endDirective(name)}}`];
+}
+
+/**
+ * Which lines belong to a tab block's body — its content and its closing fence.
+ *
+ * An editor that works line by line would otherwise treat `e|--5--|` as lyrics and offer
+ * to hang a chord off it. The opening fence is excluded because it is the block's handle:
+ * that is the row an editor puts its affordance on.
+ */
+export function tabBody(lines: readonly string[]): boolean[] {
+  const inside = lines.map(() => false);
+  let open = false;
+
+  for (const [index, line] of lines.entries()) {
+    const name = directiveName(line);
+    const closes = name === null ? null : sectionEndName(name);
+
+    if (open) {
+      inside[index] = true;
+      if (closes === TAB_SECTION) open = false;
+      continue;
+    }
+
+    if (name !== null && sectionStartName(name) === TAB_SECTION) open = true;
+  }
+
+  return inside;
 }
 
 /** The lines a delete should take: the block around a fence, or the single line. */

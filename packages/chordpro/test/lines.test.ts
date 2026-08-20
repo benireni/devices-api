@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { appendSection, isFence, moveLine, removeLine } from '../src/index';
+import { appendSection, isFence, moveLine, removeLine, tabBody } from '../src/index';
 
 const VERSE = [
   '{title: Wave}',
@@ -137,5 +137,35 @@ describe('appendSection', () => {
       '',
       '{end_of_bridge}',
     ]);
+  });
+});
+
+describe('tabBody', () => {
+  it('marks a tab block’s content and its closing fence, but not its handle', () => {
+    const lines = ['before', '{start_of_tab}', 'e|--5--|', 'B|--5--|', '{end_of_tab}', 'after'];
+
+    expect(tabBody(lines)).toEqual([false, false, true, true, true, false]);
+  });
+
+  it('marks nothing in a note with no tab', () => {
+    expect(tabBody(['{title: Wave}', '[D7M]a'])).toEqual([false, false]);
+  });
+
+  it('handles two tab blocks', () => {
+    const lines = [
+      '{start_of_tab}',
+      'a',
+      '{end_of_tab}',
+      'between',
+      '{start_of_tab}',
+      'b',
+      '{end_of_tab}',
+    ];
+
+    expect(tabBody(lines)).toEqual([false, true, true, false, false, true, true]);
+  });
+
+  it('treats an unclosed block as running to the end, so its content is never offered as lyrics', () => {
+    expect(tabBody(['{start_of_tab}', 'e|--5--|'])).toEqual([false, true]);
   });
 });
