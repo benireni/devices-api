@@ -26,6 +26,8 @@ export interface NoteSummary {
   readonly artist: string | null;
   /** `null` means the note is unfiled, at the library root. */
   readonly folder: string | null;
+  /** Last write, in milliseconds since epoch, or `null` if the platform reports none. */
+  readonly updatedAt: number | null;
 }
 
 export interface FolderSummary {
@@ -72,8 +74,9 @@ export class Library {
   }
 
   async readNote(id: string, folder: string | null): Promise<Note> {
-    const source = await this.files.read(this.notePath(id, folder));
-    return { ...summarize(id, folder, source), source };
+    const path = this.notePath(id, folder);
+    const source = await this.files.read(path);
+    return { ...summarize(id, folder, source), updatedAt: await this.files.modifiedAt(path), source };
   }
 
   /** Writes an already-composed note under a fresh id, as import does. */
@@ -151,7 +154,11 @@ export class Library {
     const summaries: NoteSummary[] = [];
     for (const name of names.filter((n) => n.endsWith(EXTENSION)).sort()) {
       const id = name.slice(0, -EXTENSION.length);
-      summaries.push(summarize(id, folder, await this.files.read(`${dir}/${name}`)));
+      const path = `${dir}/${name}`;
+      summaries.push({
+        ...summarize(id, folder, await this.files.read(path)),
+        updatedAt: await this.files.modifiedAt(path),
+      });
     }
     return summaries;
   }
@@ -178,7 +185,11 @@ export class Library {
  * Deliberately not stored separately: a title that lives in two places is a title that
  * can disagree with itself.
  */
-function summarize(id: string, folder: string | null, source: string): NoteSummary {
+function summarize(
+  id: string,
+  folder: string | null,
+  source: string,
+): Omit<NoteSummary, 'updatedAt'> {
   const { chart } = parse(source);
   const title = getDirective(chart, 'title');
   return {

@@ -8,9 +8,12 @@ import { ExpoFileStore } from './adapters/expoFileStore';
 import { seedDemoLibrary } from './demo';
 import { MemoryFileStore } from './adapters/memoryFileStore';
 import { Library } from './library';
+import { readSettings, writeSettings, type Settings } from './settings';
 import type { Environment, FileStore } from './ports';
 
 export { Library } from './library';
+export { DEFAULT_ORDER, ORDERS, ORDER_LABELS, sortNotes } from './ordering';
+export type { NoteOrder } from './ordering';
 export type { FolderSummary, LibrarySnapshot, Note, NoteSummary } from './library';
 
 const environment: Environment = {
@@ -36,6 +39,12 @@ function createFileStore(): { files: FileStore; root: string } {
 const { files, root } = createFileStore();
 
 export const library = new Library(files, environment, root);
+
+/** Preferences read and written through the same store the notes use. */
+export const settings = {
+  read: () => readSettings(files, root),
+  write: (value: Settings) => writeSettings(files, root, value),
+};
 
 log.info('library.opened', { platform: Platform.OS, root });
 

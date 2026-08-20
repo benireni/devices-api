@@ -10,6 +10,10 @@ import type { FileStore } from '../ports';
 export class MemoryFileStore implements FileStore {
   private readonly entries = new Map<string, string>();
   private readonly directories = new Set<string>();
+  private readonly times = new Map<string, number>();
+
+  /** The clock is injected so write times are deterministic in tests. */
+  constructor(private readonly now: () => number = () => Date.now()) {}
 
   listDirectories(path: string): Promise<string[]> {
     const prefix = `${path}/`;
@@ -43,16 +47,25 @@ export class MemoryFileStore implements FileStore {
 
   write(path: string, contents: string): Promise<void> {
     this.entries.set(path, contents);
+    this.times.set(path, this.now());
     return Promise.resolve();
+  }
+
+  modifiedAt(path: string): Promise<number | null> {
+    return Promise.resolve(this.times.get(path) ?? null);
   }
 
   remove(path: string): Promise<void> {
     this.entries.delete(path);
+    this.times.delete(path);
     this.directories.delete(path);
     // Removing a directory removes everything beneath it.
     const prefix = `${path}/`;
     for (const key of [...this.entries.keys()]) {
-      if (key.startsWith(prefix)) this.entries.delete(key);
+      if (key.startsWith(prefix)) {
+        this.entries.delete(key);
+        this.times.delete(key);
+      }
     }
     for (const dir of [...this.directories]) {
       if (dir.startsWith(prefix)) this.directories.delete(dir);
@@ -70,6 +83,11 @@ export class MemoryFileStore implements FileStore {
     if (file !== undefined) {
       this.entries.set(to, file);
       this.entries.delete(from);
+      const time = this.times.get(from);
+      if (time !== undefined) {
+        this.times.set(to, time);
+        this.times.delete(from);
+      }
       return;
     }
 
@@ -86,8 +104,14 @@ export class MemoryFileStore implements FileStore {
 
     for (const [key, value] of [...this.entries]) {
       if (key.startsWith(prefix)) {
-        this.entries.set(`${to}/${key.slice(prefix.length)}`, value);
+        const destination = `${to}/${key.slice(prefix.length)}`;
+        this.entries.set(destination, value);
         this.entries.delete(key);
+        const time = this.times.get(key);
+        if (time !== undefined) {
+          this.times.set(destination, time);
+          this.times.delete(key);
+        }
       }
     }
     await Promise.resolve();

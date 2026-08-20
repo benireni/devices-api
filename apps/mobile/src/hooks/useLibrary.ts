@@ -1,7 +1,15 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
-import { library, libraryReady, type LibrarySnapshot } from '@/data';
+import {
+  DEFAULT_ORDER,
+  library,
+  libraryReady,
+  settings,
+  sortNotes,
+  type LibrarySnapshot,
+  type NoteOrder,
+} from '@/data';
 
 const EMPTY: LibrarySnapshot = { folders: [], notes: [] };
 
@@ -16,11 +24,20 @@ const EMPTY: LibrarySnapshot = { folders: [], notes: [] };
 export function useLibrary() {
   const [snapshot, setSnapshot] = useState<LibrarySnapshot>(EMPTY);
   const [loading, setLoading] = useState(true);
+  const [order, setOrderState] = useState<NoteOrder>(DEFAULT_ORDER);
 
   const reload = useCallback(async () => {
     await libraryReady;
-    setSnapshot(await library.snapshot());
+    const [next, preferences] = await Promise.all([library.snapshot(), settings.read()]);
+    setSnapshot(next);
+    setOrderState(preferences.order);
     setLoading(false);
+  }, []);
+
+  /** Persisted, because a sort order that resets every launch is worse than none. */
+  const setOrder = useCallback(async (next: NoteOrder) => {
+    setOrderState(next);
+    await settings.write({ order: next });
   }, []);
 
   useFocusEffect(
@@ -29,5 +46,7 @@ export function useLibrary() {
     }, [reload]),
   );
 
-  return { snapshot, loading, reload };
+  const notes = useMemo(() => sortNotes(snapshot.notes, order), [snapshot.notes, order]);
+
+  return { snapshot, notes, order, setOrder, loading, reload };
 }

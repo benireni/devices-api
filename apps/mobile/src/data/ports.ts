@@ -16,6 +16,12 @@ export interface FileStore {
   makeDirectory(path: string): Promise<void>;
   move(from: string, to: string): Promise<void>;
   exists(path: string): Promise<boolean>;
+  /**
+   * Milliseconds since epoch of the file's last write, or `null` when the platform does
+   * not report one. Sorting treats a missing time as unknown rather than as the epoch,
+   * which would bury the note at one end of the list.
+   */
+  modifiedAt(path: string): Promise<number | null>;
 }
 
 /** Injected so time and randomness stay out of the logic, and tests stay deterministic. */

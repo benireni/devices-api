@@ -68,6 +68,13 @@ describe('MemoryFileStore', () => {
     expect(await files.read('/b.txt')).toBe('contents');
   });
 
+  it('records a write time, and reports none for a path never written', async () => {
+    await files.write('/a.txt', 'x');
+
+    expect(typeof (await files.modifiedAt('/a.txt'))).toBe('number');
+    expect(await files.modifiedAt('/never.txt')).toBeNull();
+  });
+
   it('overwrites on write', async () => {
     await files.write('/a.txt', 'first');
     await files.write('/a.txt', 'second');

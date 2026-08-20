@@ -68,4 +68,10 @@ export class ExpoFileStore implements FileStore {
   exists(path: string): Promise<boolean> {
     return Promise.resolve(new File(path).exists || new Directory(path).exists);
   }
+
+  modifiedAt(path: string): Promise<number | null> {
+    const file = new File(path);
+    if (!file.exists) return Promise.resolve(null);
+    return Promise.resolve(file.info().modificationTime ?? null);
+  }
 }

@@ -17,8 +17,8 @@ import { space } from '@/ui/tokens';
 
 export default function FolderScreen() {
   const { name } = useLocalSearchParams<{ name: string }>();
-  const { snapshot, reload } = useLibrary();
-  const notes = snapshot.notes.filter((note) => note.folder === name);
+  const { notes: sorted, reload } = useLibrary();
+  const notes = sorted.filter((note) => note.folder === name);
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);

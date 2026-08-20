@@ -1,16 +1,18 @@
 import { Stack, router } from 'expo-router';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { library } from '@/data';
+import { ORDERS, ORDER_LABELS, library } from '@/data';
 import { importNote } from '@/data/share';
 import { log } from '@/observability';
 import { useLibrary } from '@/hooks/useLibrary';
-import { Button, EmptyState, ListRow, Screen, Text } from '@/ui/components';
+import { Button, EmptyState, ListRow, OptionSheet, Screen, Text } from '@/ui/components';
 import { space } from '@/ui/tokens';
 
 export default function LibraryScreen() {
-  const { snapshot, loading, reload } = useLibrary();
-  const unfiled = snapshot.notes.filter((note) => note.folder === null);
+  const { snapshot, notes, order, setOrder, loading, reload } = useLibrary();
+  const [ordering, setOrdering] = useState(false);
+  const unfiled = notes.filter((note) => note.folder === null);
   const isEmpty = snapshot.folders.length === 0 && unfiled.length === 0;
 
   async function importFile() {
@@ -53,7 +55,13 @@ export default function LibraryScreen() {
           )}
 
           {unfiled.length > 0 && (
-            <Section label="Notes">
+            <Section
+              label="Notes"
+              action={ORDER_LABELS[order]}
+              onAction={() => {
+                setOrdering(true);
+              }}
+            >
               {unfiled.map((note) => (
                 <ListRow
                   key={note.id}
@@ -68,6 +76,19 @@ export default function LibraryScreen() {
           )}
         </ScrollView>
       )}
+
+      <OptionSheet
+        visible={ordering}
+        title="Sort notes by"
+        options={ORDERS.map((value) => ({ key: value, label: ORDER_LABELS[value] }))}
+        onSelect={(value) => {
+          setOrdering(false);
+          void setOrder(value as typeof ORDERS[number]);
+        }}
+        onCancel={() => {
+          setOrdering(false);
+        }}
+      />
 
       <View style={styles.actions}>
         <Button
@@ -97,12 +118,31 @@ export default function LibraryScreen() {
   );
 }
 
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
+function Section({
+  label,
+  action,
+  onAction,
+  children,
+}: {
+  label: string;
+  action?: string;
+  onAction?: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <View style={styles.section}>
-      <Text variant="caption" tone="textMuted" style={{ marginBottom: space.sm }}>
-        {label.toUpperCase()}
-      </Text>
+      <View style={styles.sectionHead}>
+        <Text variant="caption" tone="textMuted">
+          {label.toUpperCase()}
+        </Text>
+        {action !== undefined && onAction !== undefined && (
+          <Pressable accessibilityRole="button" onPress={onAction}>
+            <Text variant="caption" tone="accent">
+              {action}
+            </Text>
+          </Pressable>
+        )}
+      </View>
       {children}
     </View>
   );
@@ -110,5 +150,11 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 
 const styles = StyleSheet.create({
   section: { marginBottom: space.xl },
+  sectionHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: space.sm,
+  },
   actions: { flexDirection: 'row', gap: space.md, paddingVertical: space.lg },
 });

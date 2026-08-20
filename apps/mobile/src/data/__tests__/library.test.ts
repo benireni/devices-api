@@ -23,7 +23,9 @@ describe('Library', () => {
     const id = await library.createNote(null, 'Tempo Perdido');
     const { notes } = await library.snapshot();
 
-    expect(notes).toEqual([{ id, folder: null, title: 'Tempo Perdido', artist: null }]);
+    expect(notes).toHaveLength(1);
+    expect(notes[0]).toMatchObject({ id, folder: null, title: 'Tempo Perdido', artist: null });
+    expect(typeof notes[0]?.updatedAt).toBe('number');
   });
 
   it('reads the title back out of the note text rather than storing it twice', async () => {
@@ -59,7 +61,7 @@ describe('Library', () => {
     await library.moveNote(id, null, 'Practice');
 
     const { notes } = await library.snapshot();
-    expect(notes).toEqual([{ id, folder: 'Practice', title: 'Song', artist: null }]);
+    expect(notes[0]).toMatchObject({ id, folder: 'Practice', title: 'Song', artist: null });
   });
 
   it('carries notes along when a folder is renamed', async () => {
