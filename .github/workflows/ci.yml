@@ -43,6 +43,32 @@ jobs:
           path: coverage/
           retention-days: 7
 
+  e2e:
+    name: End-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      # Unit tests cannot see integration: every bug this suite has found so far — a
+      # screen rendering the version of a note from before the edit, an editor writing a
+      # stale buffer over a tab — passed 300 unit tests first. It runs against the web
+      # export, whose file store is in memory and seeded, so each test starts identical.
+      - name: Install chromium
+        run: npx playwright install --with-deps chromium
+
+      - run: npm run e2e
+
+      - name: Upload report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          retention-days: 7
+
   build:
     name: Build iOS bundle
     runs-on: ubuntu-latest
@@ -53,7 +79,7 @@ jobs:
       # Bundles the app through Metro exactly as a release build does. This catches
       # broken imports, bad module resolution across the monorepo, and anything the
       # type checker cannot see. It does not produce an .ipa — that needs a macOS
-      # runner and Apple credentials, and belongs with EAS once we ship to TestFlight.
+      # runner and Apple credentials, neither of which this project has.
       - run: npm run build:ios
 
       - name: Upload bundle
