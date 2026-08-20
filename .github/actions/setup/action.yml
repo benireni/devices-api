@@ -11,4 +11,7 @@ runs:
 
     - name: Install dependencies
       shell: bash
+      # The end-to-end flows are not part of CI, so skip fetching a browser no job uses.
+      env:
+        PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
       run: npm ci

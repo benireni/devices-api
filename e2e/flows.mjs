@@ -10,7 +10,8 @@ import { chromium } from 'playwright';
  * so every run starts from a known state and nothing touches a device. It exercises the
  * app through its actual controls: no test hooks, no reaching into internals.
  *
- * Run with `npm run e2e` (needs playwright; see the README).
+ * Run with `npm run e2e`. Needs a chromium: either `npx playwright install chromium`, or
+ * CHROMIUM_PATH pointing at one you already have.
  */
 
 const ROOT = path.resolve('apps/mobile/dist-web');
@@ -42,7 +43,11 @@ const server = http.createServer((request, response) => {
 });
 await new Promise((resolve) => server.listen(8099, resolve));
 
-const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+// CHROMIUM_PATH points at a browser that is already installed; without it, playwright
+// resolves the one `npx playwright install chromium` puts in its own cache.
+const browser = await chromium.launch(
+  process.env.CHROMIUM_PATH === undefined ? {} : { executablePath: process.env.CHROMIUM_PATH },
+);
 const page = await browser.newPage({
   viewport: { width: 393, height: 880 },
   deviceScaleFactor: 2,
