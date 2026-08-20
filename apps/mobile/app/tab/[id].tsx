@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { library } from '@/data';
+import { begin, canUndo, commit, undo, type History } from '@/editing/history';
 import { log } from '@/observability';
 import { Button, Screen, Text } from '@/ui/components';
 import { color, radius, space } from '@/ui/tokens';
@@ -30,7 +31,11 @@ const DEFAULT_COLUMNS = 8;
 export default function TabScreen() {
   const { id, folder, line } = useLocalSearchParams<{ id: string; folder?: string; line?: string }>();
   const [lines, setLines] = useState<string[] | null>(null);
-  const [grid, setGrid] = useState<TabGrid>(() => emptyTabGrid(DEFAULT_COLUMNS));
+  const [history, setHistory] = useState<History<TabGrid>>(() => begin(emptyTabGrid(DEFAULT_COLUMNS)));
+  const grid = history.present;
+  const edit = (next: TabGrid) => {
+    setHistory((current) => commit(current, next));
+  };
   const [cell, setCell] = useState<{ string: number; column: number } | null>(null);
   const [unreadable, setUnreadable] = useState(false);
 
@@ -52,7 +57,7 @@ export default function TabScreen() {
         log.warn('tab.unreadable', { id });
         return;
       }
-      setGrid(parsed);
+      setHistory(begin(parsed));
     });
   }, [id, folder, start]);
 
@@ -121,7 +126,7 @@ export default function TabScreen() {
                 key={fret}
                 disabled={cell === null}
                 onPress={() => {
-                  if (cell !== null) setGrid(setFret(grid, cell.string, cell.column, fret));
+                  if (cell !== null) edit(setFret(grid, cell.string, cell.column, fret));
                 }}
                 style={[styles.fret, cell === null && styles.disabled]}
               >
@@ -133,7 +138,7 @@ export default function TabScreen() {
             <Pressable
               disabled={cell === null}
               onPress={() => {
-                if (cell !== null) setGrid(setFret(grid, cell.string, cell.column, null));
+                if (cell !== null) edit(setFret(grid, cell.string, cell.column, null));
               }}
               style={[styles.fret, cell === null && styles.disabled]}
             >
@@ -147,14 +152,14 @@ export default function TabScreen() {
             <Button
               label="Fewer columns"
               onPress={() => {
-                setGrid(removeColumn(grid));
+                edit(removeColumn(grid));
               }}
               style={{ flex: 1 }}
             />
             <Button
               label="More columns"
               onPress={() => {
-                setGrid(addColumn(grid));
+                edit(addColumn(grid));
               }}
               style={{ flex: 1 }}
             />
@@ -163,6 +168,14 @@ export default function TabScreen() {
       )}
 
       <View style={styles.footer}>
+        <Button
+          label="Undo"
+          disabled={unreadable || !canUndo(history)}
+          onPress={() => {
+            setHistory(undo(history));
+          }}
+          style={{ flex: 1 }}
+        />
         <Button
           label="Save"
           variant="primary"
@@ -202,5 +215,5 @@ const styles = StyleSheet.create({
   },
   disabled: { opacity: 0.3 },
   columns: { flexDirection: 'row', gap: space.md, marginTop: space.xl },
-  footer: { flexDirection: 'row', paddingVertical: space.lg },
+  footer: { flexDirection: 'row', gap: space.md, paddingVertical: space.lg },
 });

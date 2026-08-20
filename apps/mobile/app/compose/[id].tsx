@@ -14,6 +14,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { library } from '@/data';
+import { begin, canUndo, commit, undo, type History } from '@/editing/history';
 import { Button, ChordPicker, OptionSheet, Screen, Text, TextField } from '@/ui/components';
 import { color, space } from '@/ui/tokens';
 
@@ -30,7 +31,8 @@ import { color, space } from '@/ui/tokens';
  */
 export default function ComposeScreen() {
   const { id, folder } = useLocalSearchParams<{ id: string; folder?: string }>();
-  const [lines, setLines] = useState<string[] | null>(null);
+  const [history, setHistory] = useState<History<string[]> | null>(null);
+  const lines = history?.present ?? null;
   const [editing, setEditing] = useState<number | null>(null);
   const [target, setTarget] = useState<{ line: number; offset: number; label: string } | null>(null);
   const [menu, setMenu] = useState<number | null>(null);
@@ -38,15 +40,21 @@ export default function ComposeScreen() {
 
   useEffect(() => {
     void library.readNote(id, folder ?? null).then((note) => {
-      setLines(note.source.split('\n'));
+      setHistory(begin(note.source.split('\n')));
     });
   }, [id, folder]);
 
-  const replace = useCallback((index: number, value: string) => {
-    setLines((current) =>
-      current === null ? current : current.map((line, i) => (i === index ? value : line)),
-    );
+  /** Every edit goes through here, which is what makes undo complete rather than partial. */
+  const edit = useCallback((next: (current: string[]) => string[]) => {
+    setHistory((current) => (current === null ? current : commit(current, next(current.present), sameLines)));
   }, []);
+
+  const replace = useCallback(
+    (index: number, value: string) => {
+      edit((current) => current.map((line, i) => (i === index ? value : line)));
+    },
+    [edit],
+  );
 
   /**
    * Applies the chord and leaves the sheet open.
@@ -63,7 +71,7 @@ export default function ComposeScreen() {
 
   /** Line operations, all of them pure functions over the source lines. */
   function apply(next: (lines: string[]) => string[]) {
-    setLines((current) => (current === null ? current : next(current)));
+    edit(next);
     setMenu(null);
   }
 
@@ -108,7 +116,7 @@ export default function ComposeScreen() {
           <Button
             label="Add line"
             onPress={() => {
-              setLines((value) => [...(value ?? []), '']);
+              edit((current) => [...current, '']);
               setEditing((lines ?? []).length);
             }}
             style={{ flex: 1 }}
@@ -131,6 +139,14 @@ export default function ComposeScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
+        <Button
+          label="Undo"
+          disabled={history === null || !canUndo(history)}
+          onPress={() => {
+            setHistory((current) => (current === null ? current : undo(current)));
+          }}
+          style={{ flex: 1 }}
+        />
         <Button
           label="Save"
           variant="primary"
@@ -283,6 +299,11 @@ function LineEditor({ initial, onDone }: { initial: string; onDone: (text: strin
       />
     </View>
   );
+}
+
+/** Documents are new arrays on every edit, so identity is not a useful comparison. */
+function sameLines(a: readonly string[], b: readonly string[]): boolean {
+  return a.length === b.length && a.every((line, index) => line === b[index]);
 }
 
 function lyricAt(lines: string[], index: number): LyricLine | null {

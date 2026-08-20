@@ -12,6 +12,7 @@ export default defineConfig({
         'apps/mobile/src/data/**/*.ts',
         'apps/mobile/src/observability/**/*.ts',
         'apps/mobile/src/player/**/*.ts',
+        'apps/mobile/src/editing/**/*.ts',
       ],
       // Files with no logic to cover. Excluding them keeps the threshold a real measure
       // of tested behaviour rather than something to be lowered until it passes.
