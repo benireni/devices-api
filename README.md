@@ -52,12 +52,18 @@ a connected device.
 | `npm run test:coverage` | The same, with thresholds enforced |
 | `npm run build:ios` | Bundles the app through Metro, exactly as a release build does |
 | `npm run e2e` | Drives the real app through its own controls in a browser |
+| `npm run e2e:report` | Opens the HTML report from the last end-to-end run |
 | `npm run latency` | Measures the operations that touch every note, as the library grows |
 
 `npm run e2e` needs a chromium — either `npx playwright install chromium` once, or
-`CHROMIUM_PATH` pointing at one you already have. It is deliberately not part of CI: the
-flows run against the web build, and downloading a browser on every install to run
-nothing would slow every other job down.
+`CHROMIUM_PATH` pointing at one you already have.
+
+The suite runs against the web export, whose file store is in memory and seeded with the
+demo library, so every test starts from the same library and none can see another's
+writes. It earns its place in CI: both bugs it has found — a screen still showing the
+version of a note from before an edit, an editor writing a stale buffer over a tab that
+had just been added — passed every unit test first. Integration is exactly what 100%
+coverage cannot see. `e2e/CLAUDE.md` has the rest.
 
 ## The note format
 

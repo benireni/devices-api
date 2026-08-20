@@ -27,6 +27,7 @@ apps/mobile/
   src/observability/ Structured logging.
   src/ui/            Tokens and the closed component set.
   app/               Screens, routed by file.
+e2e/                 End-to-end tests, driving the web export through its own controls.
 docs/                Design document, screenshots, and later ADRs.
 ```
 
@@ -106,7 +107,9 @@ composition root, and the Expo filesystem binding, which cannot run under Node. 
 that list needs the same justification — no logic, not merely inconvenient to reach.
 
 Screens and components are deliberately outside coverage. They are reviewed by looking at
-them, which is what `app/gallery.tsx` and the screenshots in `docs/images/` are for.
+them, which is what `app/gallery.tsx` and the screenshots in `docs/images/` are for — and
+driven end-to-end from `e2e/`, which is where integration bugs surface. Coverage proves
+each unit does what it says; it says nothing about whether they are wired together.
 
 ## Commands
 
@@ -116,6 +119,7 @@ npm run check         # lint + typecheck + tests
 npm run lint
 npm run typecheck
 npm run test          # or test:coverage, which enforces thresholds
+npm run e2e           # drives the real app in a browser; needs a chromium
 npm run build:ios     # bundles through Metro, exactly as a release build does
 ```
 
