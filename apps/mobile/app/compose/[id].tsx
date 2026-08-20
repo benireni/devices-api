@@ -290,10 +290,11 @@ function Line({
           <Text variant="chord" tone="chord">
             {slot.chord ?? ' '}
           </Text>
-          {/* A gap with no chord still needs a target big enough to hit, so it renders
-              a thin rule rather than collapsing to nothing. */}
+          {/* An empty gap has nothing to show, so it renders a thin rule to stay
+              tappable. A gap that already holds a chord does not: the chord is the
+              target, and a rule under it is just noise. */}
           {slot.kind === 'gap' && slot.text.trim() === '' ? (
-            <View style={[styles.gap, slot.chord !== null && styles.gapFilled]} />
+            slot.chord === null ? <View style={styles.gap} /> : null
           ) : (
             <Text variant="lyric">{slot.text}</Text>
           )}
@@ -359,7 +360,6 @@ const styles = StyleSheet.create({
     backgroundColor: color.border,
     borderRadius: 1,
   },
-  gapFilled: { backgroundColor: color.chord },
   editor: { flexDirection: 'row', gap: space.sm, alignItems: 'center', marginBottom: space.sm },
   footer: {
     flexDirection: 'row',
