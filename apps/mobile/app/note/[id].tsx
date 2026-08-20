@@ -1,6 +1,6 @@
 import { chordsUsed, getDirective, parse, serialize, setDirective } from '@qtdn/chordpro';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { library, type Note } from '@/data';
@@ -40,13 +40,22 @@ export default function NoteScreen() {
   const from = folder ?? null;
   const { running, setRunning, scroller, syncOffset } = useAutoScroll(speed);
 
-  useEffect(() => {
-    void library.readNote(id, folder ?? null).then((value) => {
-      setNote(value);
-      source.current = value.source;
-      setSpeed(readSpeed(getDirective(parse(value.source).chart, 'x_qtdn_scroll')));
-    });
-  }, [id, folder]);
+  /**
+   * Re-read on every focus, not once on mount.
+   *
+   * The editors are pushed on top of this screen, so returning from one leaves it
+   * mounted — and reading only on mount meant the chart kept showing the version from
+   * before the edit. The file was right the whole time; the screen was not.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      void library.readNote(id, folder ?? null).then((value) => {
+        setNote(value);
+        source.current = value.source;
+        setSpeed(readSpeed(getDirective(parse(value.source).chart, 'x_qtdn_scroll')));
+      });
+    }, [id, folder]),
+  );
 
   /**
    * Speed is a property of the song, so it is written back into the note.
