@@ -10,8 +10,8 @@ import {
   tabBody,
   type LyricLine,
 } from '@qtdn/chordpro';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { library } from '@/data';
@@ -39,11 +39,21 @@ export default function ComposeScreen() {
   const [menu, setMenu] = useState<number | null>(null);
   const [sectioning, setSectioning] = useState(false);
 
-  useEffect(() => {
-    void library.readNote(id, folder ?? null).then((note) => {
-      setHistory(begin(note.source.split('\n')));
-    });
-  }, [id, folder]);
+  /**
+   * Re-read on every focus, not once on mount.
+   *
+   * The tab editor is pushed on top of this screen and writes the note itself, so a
+   * buffer read once at mount no longer describes the file by the time it comes back —
+   * and saving it would erase the tab that was just written. Nothing is lost by
+   * re-reading, because {@link openTab} saves before handing over.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      void library.readNote(id, folder ?? null).then((note) => {
+        setHistory(begin(note.source.split('\n')));
+      });
+    }, [id, folder]),
+  );
 
   /** Every edit goes through here, which is what makes undo complete rather than partial. */
   const edit = useCallback((next: (current: string[]) => string[]) => {
@@ -82,6 +92,22 @@ export default function ComposeScreen() {
     router.back();
   }
 
+  /**
+   * Hands the note over to the tab editor, which writes it directly.
+   *
+   * Committing first is what makes two writers safe: the file is the truth, so whoever
+   * has it open must have the current version, and an uncommitted buffer here would be
+   * a second, divergent copy.
+   */
+  async function openTab(line?: number) {
+    if (lines !== null) await library.saveNote(id, folder ?? null, lines.join('\n'));
+    const query = [
+      ...(line === undefined ? [] : [`line=${String(line)}`]),
+      ...(folder === undefined ? [] : [`folder=${folder}`]),
+    ];
+    router.push(`/tab/${id}${query.length === 0 ? '' : `?${query.join('&')}`}`);
+  }
+
   const current = target === null || lines === null ? null : lyricAt(lines, target.line);
   const inTab = useMemo(() => tabBody(lines ?? []), [lines]);
 
@@ -108,9 +134,7 @@ export default function ComposeScreen() {
               setTarget({ line: index, offset, label });
             }}
             onTab={() => {
-              router.push(
-                `/tab/${id}?line=${String(index)}${folder === undefined ? '' : `&folder=${folder}`}`,
-              );
+              void openTab(index);
             }}
           />
         ))}
@@ -127,7 +151,7 @@ export default function ComposeScreen() {
           <Button
             label="Add tab"
             onPress={() => {
-              router.push(`/tab/${id}${folder === undefined ? '' : `?folder=${folder}`}`);
+              void openTab();
             }}
             style={{ flex: 1 }}
           />
