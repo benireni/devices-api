@@ -43,7 +43,7 @@ marketplace, not a DAW. No accounts, no server, no network calls.
 | D11 | Aesthetic | Dark-first, stage-friendly | Readable at arm's length in a dim room. |
 | D12 | Design enforcement | Tokens + closed component set + lint rules | Mechanical enforcement, not discipline. |
 | D13 | Observability | Structured local logs + in-app viewer + Sentry | Real diagnostics on a device with no debugger attached. |
-| D14 | Distribution | TestFlight, personal use | No review friction while the shape is still moving. |
+| D14 | Distribution | Local development builds | TestFlight needs a paid Apple account and the decision is not to pay it. Seven-day expiry, reinstalled. |
 | D15 | Backend (phase 2) | Go + Postgres + S3-compatible storage | Needed anyway for IAM and ML. Written in a language already fluent. |
 | D16 | ML worker (phase 4) | Python, queue-driven, separate service | The entire audio-ML ecosystem is Python. |
 
@@ -357,9 +357,24 @@ Type respected on the playing screen, all controls ≥44pt.
 parser + serializer with the round-trip property tests passing. Design tokens and the
 first component primitives. *No UI yet — the format is proven first.*
 
-**Phase 1 — v1 app.** Folder and note CRUD, structured editor, tab editor, raw mode,
-playing screen with chord diagrams and auto-scroll, audio attachment via share extension
-and document picker, `.qtdn` export/import, in-app log viewer. TestFlight build.
+**Phase 1 — the app. Shipped.** Folder and note CRUD, structured editor with the
+tap-to-place chord builder, tab grid editor, raw mode, playing screen with chord diagrams
+and auto-scroll, note export/import as files, in-app log viewer.
+
+Two things named here originally are no longer part of it:
+
+- **Audio attachments moved out**, to Phase 1.5 below. They are also the only thing
+  standing between the app and Expo Go, so the app currently installs by scanning a QR
+  code.
+- **TestFlight is out entirely**, not deferred. It requires the $99/year Apple Developer
+  Program and the decision is not to pay it. The app installs as a local development
+  build from Xcode with a free Apple ID, which expires after seven days and is
+  reinstalled.
+
+**Phase 1.5 — Attachments.** Short audio reference clips: the Voice Memos share extension,
+the document picker, and the `.qtdn` zip bundle, which exists to carry media and was
+deferred with it. This is the point where Expo Go stops working and a development build
+becomes mandatory.
 
 **Phase 2 — Sync.** Go API, Postgres, S3-compatible attachment storage, OpenAPI contract,
 push/pull sync using the `rev` and tombstones already in the schema. Last-write-wins per
@@ -408,6 +423,6 @@ that produced it.
 | **Tap-to-place is the largest single build in v1.** | It's also the feature that delivers the core promise. Mitigation: build it against the AST from day one so the editor is replaceable without touching storage. |
 | **YouTube URL ingestion violates YouTube's ToS** and is a plausible App Store rejection. | Design the pipeline as audio-file-in. URL ingestion stays a separate, later question with a different answer. |
 | **Chord recognition accuracy is genuinely limited** for acoustic guitar, especially extended and slash chords. | Set expectations in the UI: phase-4 output is a draft to correct, never a finished chart. |
-| **TestFlight builds expire after 90 days.** | Fine for personal use; just a periodic re-upload. Revisit if others start depending on it. |
+| **Local development builds expire after seven days.** | Accepted: a weekly reinstall in exchange for no Apple fee. Revisit only if someone else needs to install it. |
 | **Round-trip bugs corrupt notes silently.** | Property tests in Phase 0, before any UI exists. Non-negotiable gate. |
 | **Expo native modules require dev builds**, so Expo Go is unavailable. | Accepted from day one rather than discovered mid-build; EAS build configured in Phase 0. |
