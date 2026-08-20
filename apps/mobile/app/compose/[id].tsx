@@ -6,7 +6,7 @@ import {
   serialize,
   setChordAt,
   setText,
-  words,
+  slots,
   type LyricLine,
 } from '@qtdn/chordpro';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
@@ -32,7 +32,7 @@ export default function ComposeScreen() {
   const { id, folder } = useLocalSearchParams<{ id: string; folder?: string }>();
   const [lines, setLines] = useState<string[] | null>(null);
   const [editing, setEditing] = useState<number | null>(null);
-  const [target, setTarget] = useState<{ line: number; offset: number; word: string } | null>(null);
+  const [target, setTarget] = useState<{ line: number; offset: number; label: string } | null>(null);
   const [menu, setMenu] = useState<number | null>(null);
   const [sectioning, setSectioning] = useState(false);
 
@@ -93,8 +93,8 @@ export default function ComposeScreen() {
               replace(index, node === null ? text : renderLine(setText(node, text)));
               setEditing(null);
             }}
-            onWord={(offset, word) => {
-              setTarget({ line: index, offset, word });
+            onSlot={(offset, label) => {
+              setTarget({ line: index, offset, label });
             }}
             onTab={() => {
               router.push(
@@ -186,7 +186,7 @@ export default function ComposeScreen() {
 
       <ChordPicker
         visible={target !== null}
-        word={target?.word ?? ''}
+        word={target?.label ?? ''}
         current={current === null || target === null ? null : chordAt(current, target.offset)}
         onSelect={applyChord}
         onDismiss={() => {
@@ -202,14 +202,14 @@ function Line({
   editing,
   onEdit,
   onEditDone,
-  onWord,
+  onSlot,
   onTab,
 }: {
   source: string;
   editing: boolean;
   onEdit: () => void;
   onEditDone: (text: string) => void;
-  onWord: (offset: number, word: string) => void;
+  onSlot: (offset: number, label: string) => void;
   onTab: () => void;
 }) {
   if (editing) {
@@ -242,22 +242,28 @@ function Line({
 
   return (
     <Pressable onLongPress={onEdit} style={styles.line}>
-      {words(node).map((word) => (
+      {slots(node).map((slot) => (
         <Pressable
-          key={word.offset}
+          key={slot.offset}
           onPress={() => {
-            onWord(word.offset, word.text);
+            onSlot(slot.offset, slot.kind === 'word' ? slot.text : 'this beat');
           }}
-          // Words sit inside the line's own Pressable, and the child consumes the
-          // gesture — so without this, a long press anywhere on a word opened the chord
+          // Slots sit inside the line's own Pressable, and the child consumes the
+          // gesture — so without this, a long press anywhere on the line opened the chord
           // picker and the line menu was unreachable.
           onLongPress={onEdit}
-          style={styles.word}
+          style={styles.slot}
         >
           <Text variant="chord" tone="chord">
-            {word.chord ?? ' '}
+            {slot.chord ?? ' '}
           </Text>
-          <Text variant="lyric">{word.text}</Text>
+          {/* A gap with no chord still needs a target big enough to hit, so it renders
+              a thin rule rather than collapsing to nothing. */}
+          {slot.kind === 'gap' && slot.text.trim() === '' ? (
+            <View style={[styles.gap, slot.chord !== null && styles.gapFilled]} />
+          ) : (
+            <Text variant="lyric">{slot.text}</Text>
+          )}
         </Pressable>
       ))}
     </Pressable>
@@ -287,7 +293,7 @@ function lyricAt(lines: string[], index: number): LyricLine | null {
 }
 
 function chordAt(line: LyricLine, offset: number): string | null {
-  return words(line).find((word) => word.offset === offset)?.chord ?? null;
+  return slots(line).find((slot) => slot.offset === offset)?.chord ?? null;
 }
 
 function plainText(source: string): string {
@@ -306,7 +312,15 @@ const styles = StyleSheet.create({
   tools: { flexDirection: 'row', gap: space.md, marginTop: space.lg },
   tabRow: { paddingVertical: space.xs },
   line: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: space.sm },
-  word: { flexDirection: 'column', paddingRight: space.sm, minHeight: 44 },
+  slot: { flexDirection: 'column', paddingRight: space.sm, minHeight: 44 },
+  gap: {
+    minWidth: 18,
+    height: 2,
+    marginTop: space.sm,
+    backgroundColor: color.border,
+    borderRadius: 1,
+  },
+  gapFilled: { backgroundColor: color.chord },
   editor: { flexDirection: 'row', gap: space.sm, alignItems: 'center', marginBottom: space.sm },
   footer: {
     flexDirection: 'row',

@@ -10,7 +10,7 @@ import {
   setChordAt,
   setDirective,
   setText,
-  words,
+  slots,
 } from '../src/index';
 
 function line(source: string): LyricLine {
@@ -73,18 +73,45 @@ describe('stacked chords', () => {
   });
 });
 
-describe('words', () => {
-  it('reports each word with the chord pinned to its first character', () => {
-    expect(words(line('[Am6]Um cantinho, [Am7(b5)]um violão'))).toEqual([
-      { text: 'Um', offset: 0, chord: 'Am6' },
-      { text: 'cantinho,', offset: 3, chord: null },
-      { text: 'um', offset: 13, chord: 'Am7(b5)' },
-      { text: 'violão', offset: 16, chord: null },
+describe('slots', () => {
+  it('offers each word with the chord pinned to its first character', () => {
+    expect(slots(line('[Am6]Um cantinho'))).toEqual([
+      { offset: 0, text: 'Um', kind: 'word', chord: 'Am6' },
+      { offset: 2, text: ' ', kind: 'gap', chord: null },
+      { offset: 3, text: 'cantinho', kind: 'word', chord: null },
     ]);
   });
 
-  it('returns nothing for a line with no words', () => {
-    expect(words({ kind: 'lyric', segments: [{ chord: 'C', text: '' }] })).toEqual([]);
+  it('offers the gaps between words, which is where a bare progression lives', () => {
+    // An instrumental bar has chords and no lyrics at all.
+    const bar = slots(line('[Am7]  [D7(9)]  [G7M]'));
+
+    expect(bar.map((slot) => slot.chord)).toEqual(['Am7', 'D7(9)', 'G7M']);
+    expect(bar.every((slot) => slot.kind === 'gap')).toBe(true);
+  });
+
+  it('surfaces a chord pinned inside a word instead of hiding it', () => {
+    expect(slots(line('can[G]tinho'))).toEqual([
+      { offset: 0, text: 'can', kind: 'word', chord: null },
+      { offset: 3, text: 'tinho', kind: 'word', chord: 'G' },
+    ]);
+  });
+
+  it('surfaces a chord pinned past the last character', () => {
+    const trailing = slots(line('graça [Gb7(#11)]'));
+
+    expect(trailing.at(-1)).toEqual({ offset: 6, text: '', kind: 'gap', chord: 'Gb7(#11)' });
+  });
+
+  it('offers one slot on an empty line, so a chord can be placed before any lyric', () => {
+    expect(slots({ kind: 'lyric', segments: [{ chord: null, text: '' }] })).toEqual([
+      { offset: 0, text: '', kind: 'gap', chord: null },
+    ]);
+  });
+
+  it('covers the whole line, with each slot running to the next', () => {
+    const covered = slots(line('[C]a b  [G]c'));
+    expect(covered.map((slot) => slot.text).join('')).toBe('a b  c');
   });
 });
 
@@ -108,6 +135,10 @@ describe('setChordAt', () => {
   it('leaves every other chord exactly where it was', () => {
     const edited = setChordAt(line('[C]a [Am7]b [G7(9)]c'), 2, 'D°');
     expect(render(edited)).toBe('[C]a [D°]b [G7(9)]c');
+  });
+
+  it('pins a chord into a gap, where an instrumental bar needs one', () => {
+    expect(render(setChordAt(line('[Am7]   '), 3, 'D7(9)'))).toBe('[Am7]   [D7(9)]');
   });
 
   it('does not disturb a chord pinned mid-word', () => {

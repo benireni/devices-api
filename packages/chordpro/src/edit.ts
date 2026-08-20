@@ -9,12 +9,22 @@ import type { Chart, LyricLine, Node, Segment } from './ast';
  * that lets an edit touch a single chord without disturbing the rest of the line.
  */
 
-/** A word of lyric, with the chord pinned to its first character if there is one. */
-export interface Word {
-  readonly text: string;
-  readonly chord: string | null;
-  /** Character offset of the word's first character within the line. */
+/**
+ * A position on a line that a chord can be pinned to.
+ *
+ * Not just words. A chart routinely puts chords where there are no lyrics at all — an
+ * instrumental bar written `[Am]  [D7]  [G7]`, a turnaround, a chord landing between two
+ * words — so gaps are addressable too, and so is any offset that already carries a chord
+ * even when it falls inside a word.
+ */
+export interface Slot {
+  /** Character offset of the slot's first character within the line. */
   readonly offset: number;
+  /** The text this slot covers, up to the next slot. */
+  readonly text: string;
+  /** `gap` is whitespace or the end of the line; `word` is anything else. */
+  readonly kind: 'word' | 'gap';
+  readonly chord: string | null;
 }
 
 interface Decomposed {
@@ -76,30 +86,37 @@ export function compose({ text, chords }: Decomposed): LyricLine {
   return { kind: 'lyric', segments };
 }
 
-/** The line's words, each carrying the chord pinned to its first character. */
-export function words(line: LyricLine): Word[] {
+/**
+ * Every position on the line a chord can be attached to, in order.
+ *
+ * Anchors are the start of each word, the start of each run of whitespace, and every
+ * offset that already carries a chord. That last one is what keeps a chord pinned
+ * mid-word visible and editable rather than merely preserved.
+ */
+export function slots(line: LyricLine): Slot[] {
   const { text, chords } = decompose(line);
-  const found: Word[] = [];
 
-  const pattern = /\S+/g;
-  let match = pattern.exec(text);
-  while (match !== null) {
-    found.push({
-      text: match[0],
-      offset: match.index,
-      chord: chords.get(match.index)?.[0] ?? null,
-    });
-    match = pattern.exec(text);
+  const anchors = new Set<number>(chords.keys());
+  for (const match of text.matchAll(/\S+|\s+/g)) {
+    anchors.add(match.index);
   }
+  // An empty line still offers one slot, so a chord can be placed before any lyric exists.
+  if (anchors.size === 0) anchors.add(0);
 
-  return found;
+  const ordered = [...anchors].sort((a, b) => a - b);
+
+  return ordered.map((offset, index) => ({
+    offset,
+    text: text.slice(offset, ordered[index + 1] ?? text.length),
+    kind: /\s/.test(text.charAt(offset)) || offset >= text.length ? ('gap' as const) : ('word' as const),
+    chord: chords.get(offset)?.[0] ?? null,
+  }));
 }
 
 /**
- * Pins a chord to a word's first character, or clears it when `chord` is `null`.
+ * Pins a chord to an offset, or clears it when `chord` is `null`.
  *
- * Chords sitting elsewhere in the line — mid-word, or on a word that is not the target —
- * are left exactly where they are.
+ * Chords sitting at other offsets are left exactly where they are.
  */
 export function setChordAt(line: LyricLine, offset: number, chord: string | null): LyricLine {
   const { text, chords } = decompose(line);
