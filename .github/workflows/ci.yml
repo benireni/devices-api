@@ -43,6 +43,31 @@ jobs:
           path: coverage/
           retention-days: 7
 
+  latency:
+    name: Latency fence
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      # Asserts the shape rather than a wall-clock figure, so it means the same thing on
+      # any runner: the scan must stay roughly linear in the size of the library, and
+      # must not issue more store calls per note than it does today. The quadratic parser
+      # this now catches was invisible to every other job.
+      - run: npm run latency
+
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+
+      # Advisory. This is a local, offline notes app, so a build-time advisory is not an
+      # exposure — but nothing was watching the count, so it could only grow.
+      - run: npm audit --audit-level=high
+        continue-on-error: true
+
   e2e:
     name: End-to-end
     runs-on: ubuntu-latest
