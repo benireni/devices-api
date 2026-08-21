@@ -112,9 +112,15 @@ a test that could not be written.
 So when coverage fails, the first question is "is this branch reachable?". If it is not,
 remove it. If it is, test it. **Lowering the threshold is not the third option.**
 
-Only three things are excluded, and all three have no logic to cover: type-only files, the
-composition root, and the Expo filesystem binding, which cannot run under Node. Adding to
-that list needs the same justification — no logic, not merely inconvenient to reach.
+Four kinds of file are excluded, and none of them holds a decision: type-only files
+(`ast.ts`, `ports.ts`), the two composition roots, and the platform bindings that cannot
+run under Node — the Expo filesystem adapter, the share sheet, the animation-frame loop
+and the navigation-focus hook. Every one is named in `vitest.config.ts` with its reason.
+
+Adding to that list needs the same justification — no logic, not merely inconvenient to
+reach — and the file must still be inside the `include` globs. A file left out of
+`include` is exempt without appearing on any list, which is how `useLibrary.ts` went
+unmeasured without anyone deciding it should be.
 
 Screens and components are deliberately outside coverage. They are reviewed by looking at
 them, which is what `app/gallery.tsx` and the screenshots in `docs/images/` are for — and

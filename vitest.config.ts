@@ -13,6 +13,7 @@ export default defineConfig({
         'apps/mobile/src/observability/**/*.ts',
         'apps/mobile/src/player/**/*.ts',
         'apps/mobile/src/editing/**/*.ts',
+        'apps/mobile/src/hooks/**/*.ts',
       ],
       // Files with no logic to cover. Excluding them keeps the threshold a real measure
       // of tested behaviour rather than something to be lowered until it passes.
@@ -25,6 +26,11 @@ export default defineConfig({
         '**/adapters/expoFileStore.ts', // platform binding; cannot run under Node
         '**/useAutoScroll.ts', // platform binding: animation frames, refs, keep-awake
         'apps/mobile/src/data/share.ts', // platform binding: share sheet and document picker
+        // Platform binding: navigation focus. Zero branches — it awaits, sets state and
+        // memoizes, and every decision it defers to (sortNotes, readOrder, settings) is
+        // tested directly. Included in the globs deliberately, so this exclusion is a
+        // recorded decision rather than a file nobody noticed was never measured.
+        'apps/mobile/src/hooks/useLibrary.ts',
       ],
       // 100% across the board. Every gap so far has been an unreachable branch worth
       // deleting rather than a test worth writing, so the bar stays here.
