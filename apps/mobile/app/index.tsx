@@ -1,8 +1,8 @@
 import { Stack, router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { ORDERS, ORDER_LABELS, library, type NoteSummary } from '@/data';
+import { ORDERS, ORDER_LABELS, library, sortNotes, type NoteSummary } from '@/data';
 import { importNote } from '@/data/share';
 import { log } from '@/observability';
 import { useLibrary } from '@/hooks/useLibrary';
@@ -17,6 +17,9 @@ import {
 } from '@/ui/components';
 import { space } from '@/ui/tokens';
 
+/** Long enough to skip the letters of a word, short enough to feel like typing. */
+const SEARCH_DEBOUNCE_MS = 200;
+
 export default function LibraryScreen() {
   const { snapshot, notes, order, setOrder, loading, reload } = useLibrary();
   const [ordering, setOrdering] = useState(false);
@@ -30,8 +33,27 @@ export default function LibraryScreen() {
       setResults([]);
       return;
     }
-    void library.search(query).then(setResults);
+
+    // Debounced, and cancelled on the way out.
+    //
+    // Every keystroke used to start a full library scan, and `setResults` took whichever
+    // promise resolved last rather than the one for the query on screen — so a slow scan
+    // could paint results for a prefix the user had already typed past.
+    let live = true;
+    const timer = setTimeout(() => {
+      void library.search(query).then((found) => {
+        if (live) setResults(found);
+      });
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      live = false;
+      clearTimeout(timer);
+    };
   }, [query, searching]);
+  // Search results are notes like any others, so they follow the order the user chose.
+  // They used to arrive in scan order, which quietly ignored a persisted preference.
+  const found = useMemo(() => sortNotes(results, order), [results, order]);
   const unfiled = notes.filter((note) => note.folder === null);
   const isEmpty = snapshot.folders.length === 0 && unfiled.length === 0;
 
@@ -60,12 +82,44 @@ export default function LibraryScreen() {
 
       <TextField value={query} onChangeText={setQuery} placeholder="Search notes" />
 
+      {/*
+        Outside the Notes section on purpose. The sort control used to live in that
+        section's header, which only renders when something is unfiled — so filing every
+        note made a persisted, app-wide setting unreachable. The log viewer had no route
+        at all: `observability/CLAUDE.md` calls it the only account of what happened at a
+        rehearsal, and reaching it meant typing a URL scheme into Safari.
+      */}
+      <View style={styles.controls}>
+        <Pressable
+          accessibilityRole="button"
+          hitSlop={space.md}
+          onPress={() => {
+            setOrdering(true);
+          }}
+        >
+          <Text variant="caption" tone="accent">
+            {`Sort: ${ORDER_LABELS[order]}`}
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          hitSlop={space.md}
+          onPress={() => {
+            router.push('/logs');
+          }}
+        >
+          <Text variant="caption" tone="textMuted">
+            Logs
+          </Text>
+        </Pressable>
+      </View>
+
       {searching ? (
-        results.length === 0 ? (
+        found.length === 0 ? (
           <EmptyState title="No matches" hint={`Nothing in the library matches “${query}”.`} />
         ) : (
           <ScrollView showsVerticalScrollIndicator={false} style={styles.results}>
-            {results.map((note) => (
+            {found.map((note) => (
               <ListRow
                 key={note.id}
                 title={note.title}
@@ -99,13 +153,7 @@ export default function LibraryScreen() {
           )}
 
           {unfiled.length > 0 && (
-            <Section
-              label="Notes"
-              action={ORDER_LABELS[order]}
-              onAction={() => {
-                setOrdering(true);
-              }}
-            >
+            <Section label="Notes">
               {unfiled.map((note) => (
                 <ListRow
                   key={note.id}
@@ -168,30 +216,13 @@ export default function LibraryScreen() {
   );
 }
 
-function Section({
-  label,
-  action,
-  onAction,
-  children,
-}: {
-  label: string;
-  action?: string;
-  onAction?: () => void;
-  children: React.ReactNode;
-}) {
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <View style={styles.section}>
       <View style={styles.sectionHead}>
         <Text variant="caption" tone="textMuted">
           {label.toUpperCase()}
         </Text>
-        {action !== undefined && onAction !== undefined && (
-          <Pressable accessibilityRole="button" onPress={onAction}>
-            <Text variant="caption" tone="accent">
-              {action}
-            </Text>
-          </Pressable>
-        )}
       </View>
       {children}
     </View>
@@ -200,6 +231,12 @@ function Section({
 
 const styles = StyleSheet.create({
   results: { marginTop: space.lg },
+  controls: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: space.md,
+  },
   section: { marginBottom: space.xl },
   sectionHead: {
     flexDirection: 'row',

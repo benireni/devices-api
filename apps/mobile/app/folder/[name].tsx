@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { library } from '@/data';
+import { importNote } from '@/data/share';
 import { useLibrary } from '@/hooks/useLibrary';
 import { log } from '@/observability';
 import {
@@ -12,6 +13,7 @@ import {
   ListRow,
   PromptSheet,
   Screen,
+  Text,
 } from '@/ui/components';
 import { space } from '@/ui/tokens';
 
@@ -43,6 +45,17 @@ export default function FolderScreen() {
     router.back();
   }
 
+  async function importFile() {
+    try {
+      const id = await importNote(name);
+      await reload();
+      if (id !== null) router.push(`/note/${id}?folder=${encodeURIComponent(name)}`);
+    } catch (cause) {
+      log.error('note.import.failed', cause);
+      setError('Could not read that file. It may not be a chord chart.');
+    }
+  }
+
   async function newNote() {
     const id = await library.createNote(name, 'Untitled');
     await reload();
@@ -70,7 +83,21 @@ export default function FolderScreen() {
         </ScrollView>
       )}
 
+      {error !== null && !renaming && (
+        <Text variant="caption" tone="danger">
+          {error}
+        </Text>
+      )}
+
       <View style={styles.actions}>
+        <Button
+          label="Import"
+          onPress={() => {
+            setError(null);
+            void importFile();
+          }}
+          style={{ flex: 1 }}
+        />
         <Button
           label="Rename"
           onPress={() => {
