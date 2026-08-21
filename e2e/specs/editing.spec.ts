@@ -68,6 +68,50 @@ test.describe('the chord builder', () => {
     await expect(app.chordSymbol()).toHaveText('F7M');
   });
 
+  test('shows a chord it cannot hold, verbatim, and writes nothing until told to', async ({
+    app,
+  }) => {
+    // `C°7M` reads back fine but the builder has no major seventh to hang on a
+    // diminished chord, so it would silently become `C°` on the first chip press.
+    await app.back();
+    await app.tap('Source');
+    const source = app.field('{title: …}');
+    await source.fill(`${await source.inputValue()}\n[C°7M]diminuto`);
+    await app.tap('Save');
+    await app.tap('Edit');
+    await app.tapText('diminuto');
+
+    await expect(app.sheet()).toContainText('C°7M');
+    await expect(app.sheet()).toContainText('can’t hold');
+    await expect(app.sheet().getByRole('button', { name: 'm', exact: true })).toBeDisabled();
+
+    await app.tapInSheet('Keep it');
+    await app.tap('Save');
+
+    await expect(app.text('C°7M')).toBeVisible();
+  });
+
+  test('takes a rewritable chord over only on an explicit press', async ({ app }) => {
+    await app.back();
+    await app.tap('Source');
+    const source = app.field('{title: …}');
+    await source.fill(`${await source.inputValue()}\n[C7(13,9)]tensoes`);
+    await app.tap('Save');
+    await app.tap('Edit');
+    await app.tapText('tensoes');
+
+    // Reordering is not tone loss, and the copy says so.
+    await expect(app.sheet()).toContainText('the same chord');
+
+    // Taking over unlocks the chips rather than dismissing, so the sheet stays up.
+    await app.tapInSheet('Edit as C7(9,13)', { closes: false });
+    await expect(app.chordSymbol()).toHaveText('C7(9,13)');
+    await app.tapInSheet('Done');
+    await app.tap('Save');
+
+    await expect(app.text('C7(9,13)')).toBeVisible();
+  });
+
   test('removes a chord', async ({ app }) => {
     await app.tapText('Olha');
     await app.tapInSheet('Remove');

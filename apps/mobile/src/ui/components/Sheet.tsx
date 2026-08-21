@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
-import { color, radius, space } from '../tokens';
+import { color, radius, space, type TypeVariant } from '../tokens';
 import { Text } from './Text';
 
 export interface SheetProps {
@@ -9,6 +9,8 @@ export interface SheetProps {
   title: string;
   /** Secondary line under the title, for context rather than instruction. */
   subtitle?: string | undefined;
+  /** The title's type. A chord symbol is notation, so it is set in the mono face. */
+  titleVariant?: TypeVariant | undefined;
   onDismiss: () => void;
   children: ReactNode;
   /** Buttons, laid out in a row at the bottom. */
@@ -22,7 +24,15 @@ export interface SheetProps {
  * press inside the sheet bubbles out and dismisses it, which is a bug that only shows up
  * once a sheet has more than one control in it.
  */
-export function Sheet({ visible, title, subtitle, onDismiss, children, actions }: SheetProps) {
+export function Sheet({
+  visible,
+  title,
+  subtitle,
+  titleVariant = 'heading',
+  onDismiss,
+  children,
+  actions,
+}: SheetProps) {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onDismiss}>
       <View style={styles.container}>
@@ -34,7 +44,7 @@ export function Sheet({ visible, title, subtitle, onDismiss, children, actions }
         />
         <View style={styles.panel}>
           <View style={styles.header}>
-            <Text variant="heading">{title}</Text>
+            <Text variant={titleVariant}>{title}</Text>
             {subtitle !== undefined && (
               <Text variant="caption" tone="textMuted">
                 {subtitle}

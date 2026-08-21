@@ -6,6 +6,8 @@ import {
   SUSPENSIONS,
   TENSIONS,
   buildChord,
+  isExactlyEditable,
+  normalize,
   optionsFor,
   parseChord,
   toggleTension,
@@ -45,11 +47,14 @@ export interface ChordPickerProps {
  */
 export function ChordPicker({ visible, word, current, onSelect, onDismiss }: ChordPickerProps) {
   const [spec, setSpec] = useState<ChordSpec>(EMPTY_SPEC);
+  /** True while the sheet is previewing a chord it cannot hold as written. */
+  const [locked, setLocked] = useState(false);
 
   useEffect(() => {
-    if (visible) {
-      setSpec(parseChord(current ?? '') ?? EMPTY_SPEC);
-    }
+    if (!visible) return;
+    const parsed = parseChord(current ?? '');
+    setSpec(parsed === null ? EMPTY_SPEC : normalize(parsed));
+    setLocked(current !== null && current !== '' && !isExactlyEditable(current));
   }, [visible, current]);
 
   const symbol = buildChord(spec);
@@ -63,34 +68,62 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
     commit(update(spec, over));
   };
 
+  const notice = locked ? describe(current ?? '', symbol) : null;
+
   return (
     <Sheet
       visible={visible}
-      title={symbol}
+      // The note's own symbol while locked: showing what the builder would produce is
+      // what made the sheet claim a chord it had not been given.
+      title={locked ? (current ?? '') : symbol}
+      titleVariant="chord"
       subtitle={`over “${word}”`}
       onDismiss={onDismiss}
       actions={
-        <>
-          <Button
-            label="Remove"
-            variant="danger"
-            onPress={() => {
-              onSelect(null);
-              onDismiss();
-            }}
-            style={{ flex: 1 }}
-          />
-          <Button label="Done" variant="primary" onPress={onDismiss} style={{ flex: 1 }} />
-        </>
+        locked ? (
+          <>
+            <Button label="Keep it" onPress={onDismiss} style={{ flex: 1 }} />
+            <Button
+              label={notice?.action ?? 'Edit'}
+              variant="primary"
+              onPress={() => {
+                // Taking over is the first and only write, so undo has one step back to
+                // the chord that was there.
+                setLocked(false);
+                commit(spec);
+              }}
+              style={{ flex: 1 }}
+            />
+          </>
+        ) : (
+          <>
+            <Button
+              label="Remove"
+              variant="danger"
+              onPress={() => {
+                onSelect(null);
+                onDismiss();
+              }}
+              style={{ flex: 1 }}
+            />
+            <Button label="Done" variant="primary" onPress={onDismiss} style={{ flex: 1 }} />
+          </>
+        )
       }
     >
-      <ScrollView showsVerticalScrollIndicator={false}>
+      {notice !== null && (
+        <Text variant="caption" tone="textMuted">
+          {notice.message}
+        </Text>
+      )}
+      <ScrollView showsVerticalScrollIndicator={false} pointerEvents={locked ? 'none' : 'auto'}>
         <Row label="Root">
           {NOTES.map((note) => (
             <Chip
               key={note}
               label={note}
               selected={note === spec.root}
+              disabled={locked}
               onPress={() => {
                 patch({ root: note });
               }}
@@ -104,6 +137,7 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
               key={quality || 'major'}
               label={quality === '' ? 'major' : quality}
               selected={quality === spec.quality}
+              disabled={locked}
               onPress={() => {
                 patch({ quality });
               }}
@@ -117,7 +151,7 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
               key={seventh || 'none'}
               label={seventh === '' ? '—' : seventh}
               selected={seventh === spec.seventh}
-              disabled={!options.sevenths.includes(seventh)}
+              disabled={locked || !options.sevenths.includes(seventh)}
               onPress={() => {
                 patch({ seventh });
               }}
@@ -131,7 +165,7 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
               key={sus || 'none'}
               label={sus === '' ? '—' : sus}
               selected={sus === spec.sus}
-              disabled={!options.suspensions.includes(sus)}
+              disabled={locked || !options.suspensions.includes(sus)}
               onPress={() => {
                 patch({ sus });
               }}
@@ -145,7 +179,7 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
               key={tension}
               label={tension}
               selected={spec.tensions.includes(tension)}
-              disabled={!options.tensions.includes(tension)}
+              disabled={locked || !options.tensions.includes(tension)}
               onPress={() => {
                 commit(toggleTension(spec, tension));
               }}
@@ -157,6 +191,7 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
           <Chip
             label="—"
             selected={spec.bass === null}
+            disabled={locked}
             onPress={() => {
               patch({ bass: null });
             }}
@@ -166,6 +201,7 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
               key={note}
               label={note}
               selected={note === spec.bass}
+              disabled={locked}
               onPress={() => {
                 patch({ bass: note });
               }}
@@ -174,6 +210,53 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
         </Row>
       </ScrollView>
     </Sheet>
+  );
+}
+
+/**
+ * What the take-over would do, said in the user's terms rather than the builder's.
+ *
+ * Reordering tensions is not the same event as dropping one, even though both mean the
+ * symbol on screen is about to change: `C7(13,9)` becomes `C7(9,13)`, which is the same
+ * chord written the way this app writes it. Calling that corruption would teach people to
+ * ignore the warning that matters.
+ */
+function describe(original: string, target: string): { message: string; action: string } {
+  const spec = parseChord(original);
+
+  if (spec === null) {
+    return {
+      message: `The builder doesn’t know ${original}. Editing it replaces it.`,
+      action: 'Replace it',
+    };
+  }
+
+  if (isReordering(spec)) {
+    return {
+      message: `Tensions are written lowest first, so editing this rewrites it as ${target} — the same chord.`,
+      action: `Edit as ${target}`,
+    };
+  }
+
+  return {
+    message: `The builder can’t hold ${original} as written. Editing it makes it ${target}.`,
+    action: `Edit as ${target}`,
+  };
+}
+
+/** Whether normalizing only reorders the tensions, keeping every note of the chord. */
+function isReordering(spec: ChordSpec): boolean {
+  const tidy = normalize(spec);
+  const same = (a: readonly string[], b: readonly string[]) =>
+    a.length === b.length && [...a].sort().join() === [...b].sort().join();
+
+  return (
+    tidy.root === spec.root &&
+    tidy.quality === spec.quality &&
+    tidy.seventh === spec.seventh &&
+    tidy.sus === spec.sus &&
+    tidy.bass === spec.bass &&
+    same(tidy.tensions, spec.tensions)
   );
 }
 
