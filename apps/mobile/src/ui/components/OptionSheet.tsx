@@ -13,16 +13,26 @@ export interface Option {
 export interface OptionSheetProps {
   visible: boolean;
   title: string;
+  /** Names what the options will act on, when the title alone does not. */
+  subtitle?: string | undefined;
   options: readonly Option[];
   onSelect: (key: string) => void;
   onCancel: () => void;
 }
 
-export function OptionSheet({ visible, title, options, onSelect, onCancel }: OptionSheetProps) {
+export function OptionSheet({
+  visible,
+  title,
+  subtitle,
+  options,
+  onSelect,
+  onCancel,
+}: OptionSheetProps) {
   return (
     <Sheet
       visible={visible}
       title={title}
+      subtitle={subtitle}
       onDismiss={onCancel}
       actions={<Button label="Cancel" onPress={onCancel} style={{ flex: 1 }} />}
     >

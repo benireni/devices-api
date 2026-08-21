@@ -1,5 +1,8 @@
 import {
   appendSection,
+  isFence,
+  isTabStart,
+  QTDN_PREFIX,
   moveLine,
   parse,
   removeLine,
@@ -17,7 +20,15 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { library } from '@/data';
 import { log } from '@/observability';
 import { begin, canUndo, commit, undo, type History } from '@/editing/history';
-import { Button, ChordPicker, OptionSheet, Screen, Text, TextField } from '@/ui/components';
+import {
+  Button,
+  ChordPicker,
+  ConfirmSheet,
+  OptionSheet,
+  Screen,
+  Text,
+  TextField,
+} from '@/ui/components';
 import { color, space } from '@/ui/tokens';
 
 /**
@@ -40,6 +51,7 @@ export default function ComposeScreen() {
   const [menu, setMenu] = useState<number | null>(null);
   const [sectioning, setSectioning] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState(false);
 
   /**
    * Re-read on every focus, not once on mount.
@@ -182,6 +194,20 @@ export default function ComposeScreen() {
         </View>
       </ScrollView>
 
+      <ConfirmSheet
+        visible={leaving}
+        title="Discard changes?"
+        message="This note goes back to how it was when you opened it."
+        confirmLabel="Discard"
+        onConfirm={() => {
+          setLeaving(false);
+          router.back();
+        }}
+        onCancel={() => {
+          setLeaving(false);
+        }}
+      />
+
       {problem !== null && (
         <Text variant="caption" tone="danger">
           {problem}
@@ -189,6 +215,17 @@ export default function ComposeScreen() {
       )}
 
       <View style={styles.footer}>
+        <Button
+          label="Close"
+          onPress={() => {
+            if (history !== null && canUndo(history)) {
+              setLeaving(true);
+              return;
+            }
+            router.back();
+          }}
+          style={{ flex: 1 }}
+        />
         <Button
           label="Undo"
           disabled={history === null || !canUndo(history)}
@@ -210,11 +247,23 @@ export default function ComposeScreen() {
       <OptionSheet
         visible={menu !== null}
         title="Line"
+        // Says which line it will act on. It used to say only "Line", so a mis-aimed
+        // long press could delete a verse with nothing on screen naming the target.
+        subtitle={menu === null ? undefined : (plainText(lines?.[menu] ?? '') || 'blank line')}
         options={[
           { key: 'edit', label: 'Edit text' },
+          { key: 'above', label: 'Insert line above' },
+          { key: 'below', label: 'Insert line below' },
           { key: 'up', label: 'Move up' },
           { key: 'down', label: 'Move down' },
-          { key: 'delete', label: 'Delete', subtitle: 'Removes the whole block if this opens one' },
+          {
+            key: 'delete',
+            label: 'Delete',
+            subtitle:
+              menu !== null && opensBlock(lines ?? [], menu)
+                ? 'Removes the whole block this opens'
+                : undefined,
+          },
         ]}
         onSelect={(action) => {
           const index = menu;
@@ -222,6 +271,12 @@ export default function ComposeScreen() {
           if (action === 'edit') {
             setMenu(null);
             setEditing(index);
+            return;
+          }
+          if (action === 'above' || action === 'below') {
+            const at = action === 'above' ? index : index + 1;
+            apply((value) => [...value.slice(0, at), '', ...value.slice(at)]);
+            setEditing(at);
             return;
           }
           if (action === 'up') apply((value) => moveLine(value, index, -1));
@@ -298,7 +353,7 @@ function Line({
 
   const node = parse(source).chart.nodes[0];
 
-  if (source.startsWith('{start_of_tab')) {
+  if (isTabStart(source)) {
     return (
       <Pressable onPress={onTab} onLongPress={onEdit} style={styles.tabRow}>
         <Text variant="caption" tone="accent">
@@ -306,6 +361,12 @@ function Line({
         </Text>
       </Pressable>
     );
+  }
+
+  if (node !== undefined && node.kind === 'directive' && node.name.startsWith(QTDN_PREFIX)) {
+    // The note's id and scroll speed are plumbing. Showing them made the default
+    // editor's first screenful raw ChordPro, including a UUID.
+    return null;
   }
 
   if (node === undefined || node.kind !== 'lyric') {
@@ -369,6 +430,11 @@ function LineEditor({ initial, onDone }: { initial: string; onDone: (text: strin
 /** Documents are new arrays on every edit, so identity is not a useful comparison. */
 function sameLines(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((line, index) => line === b[index]);
+}
+
+/** Whether this line opens a block, so deleting it takes the block with it. */
+function opensBlock(lines: string[], index: number): boolean {
+  return isFence(lines[index] ?? '');
 }
 
 function lyricAt(lines: string[], index: number): LyricLine | null {
