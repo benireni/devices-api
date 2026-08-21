@@ -208,3 +208,21 @@ function matchNote(text: string): string | null {
   const matches = NOTES.filter((note) => text.startsWith(note)).sort((a, b) => b.length - a.length);
   return matches[0] ?? null;
 }
+
+/**
+ * Whether the builder can hold this symbol without changing it.
+ *
+ * The picker assembles a chord from parts, so it can only represent what `buildChord`
+ * emits. Two kinds of symbol fall outside that: ones `parseChord` refuses outright, and
+ * ones it reads but `normalize` would rewrite — `C°7M` has no major seventh to keep, and
+ * `C7(13,9)` is the same chord written in another order. Seeding the picker from either
+ * put a symbol on screen that the first chip press would silently replace.
+ *
+ * Deliberately separate from `parseChord`, which answers "can this be read" for callers
+ * like the diagram strip. Reading a chord and editing one are different questions, and
+ * folding them together would delete diagrams the moment the shape table grows.
+ */
+export function isExactlyEditable(symbol: string): boolean {
+  const spec = parseChord(symbol);
+  return spec !== null && buildChord(normalize(spec)) === symbol;
+}

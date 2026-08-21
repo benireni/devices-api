@@ -9,6 +9,7 @@ import {
   SUSPENSIONS,
   TENSIONS,
   buildChord,
+  isExactlyEditable,
   normalize,
   optionsFor,
   parseChord,
@@ -111,6 +112,47 @@ describe('parseChord', () => {
       }),
       { numRuns: 1000 },
     );
+  });
+
+  it('calls every symbol the builder can emit exactly editable', () => {
+    const arb = fc.record({
+      root: fc.constantFrom(...NOTES),
+      quality: fc.constantFrom(...QUALITIES),
+      seventh: fc.constantFrom(...SEVENTHS),
+      sus: fc.constantFrom(...SUSPENSIONS),
+      tensions: fc.uniqueArray(fc.constantFrom(...TENSIONS), { maxLength: 3 }),
+      bass: fc.option(fc.constantFrom(...NOTES), { nil: null }),
+    });
+
+    // The fixed point the picker rests on: seed it with anything the builder wrote and
+    // the first chip press cannot silently rewrite the symbol on screen.
+    fc.assert(
+      fc.property(arb, (value) => {
+        expect(isExactlyEditable(buildChord(normalize(value)))).toBe(true);
+      }),
+      { numRuns: 1000 },
+    );
+  });
+});
+
+describe('isExactlyEditable', () => {
+  it.each(['F7M', 'Dm7/G', 'C7(9,13)', 'C°', 'Am7(b5)'])('holds %s as written', (symbol) => {
+    expect(isExactlyEditable(symbol)).toBe(true);
+  });
+
+  it.each([
+    ['C°7M', 'a diminished chord has no major seventh to keep'],
+    ['C+7', 'an augmented chord carries no seventh'],
+    ['C7(13,9)', 'tensions are written lowest first'],
+    ['C7(9,9)', 'a tension is not repeated'],
+  ])('refuses %s, because %s', (symbol) => {
+    expect(parseChord(symbol)).not.toBeNull();
+    expect(isExactlyEditable(symbol)).toBe(false);
+  });
+
+  it.each(['Gb7(#11)', 'Cdim', 'H', ''])('refuses %s, which it cannot read at all', (symbol) => {
+    expect(parseChord(symbol)).toBeNull();
+    expect(isExactlyEditable(symbol)).toBe(false);
   });
 });
 

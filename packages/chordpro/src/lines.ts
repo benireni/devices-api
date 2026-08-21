@@ -66,30 +66,34 @@ export function appendSection(
 }
 
 /**
- * Which lines belong to a tab block's body — its content and its closing fence.
+ * For each line inside a tab block, the index of the fence that opens it.
  *
  * An editor that works line by line would otherwise treat `e|--5--|` as lyrics and offer
- * to hang a chord off it. The opening fence is excluded because it is the block's handle:
- * that is the row an editor puts its affordance on.
+ * to hang a chord off it. The opening fence maps to `null` because it is the block's
+ * handle rather than its content: that is the row an editor puts its affordance on.
+ *
+ * The owner, not a bare `inside` flag, because an editor that opens a block has to say
+ * *which* block. Answering that from a row's own index reads the note from the wrong
+ * line, which is how tapping a tab's body came to report it as unreadable.
  */
-export function tabBody(lines: readonly string[]): boolean[] {
-  const inside = lines.map(() => false);
-  let open = false;
+export function tabOwners(lines: readonly string[]): (number | null)[] {
+  const owners = lines.map<number | null>(() => null);
+  let fence: number | null = null;
 
   for (const [index, line] of lines.entries()) {
     const name = directiveName(line);
     const closes = name === null ? null : sectionEndName(name);
 
-    if (open) {
-      inside[index] = true;
-      if (closes === TAB_SECTION) open = false;
+    if (fence !== null) {
+      owners[index] = fence;
+      if (closes === TAB_SECTION) fence = null;
       continue;
     }
 
-    if (name !== null && sectionStartName(name) === TAB_SECTION) open = true;
+    if (name !== null && sectionStartName(name) === TAB_SECTION) fence = index;
   }
 
-  return inside;
+  return owners;
 }
 
 /** The lines a delete should take: the block around a fence, or the single line. */

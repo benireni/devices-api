@@ -21,6 +21,7 @@ export {
   SUSPENSIONS,
   TENSIONS,
   buildChord,
+  isExactlyEditable,
   normalize,
   optionsFor,
   parseChord,
@@ -42,7 +43,7 @@ export {
   setFret,
 } from './tab';
 export type { Fret, StringName, TabGrid, TabRow } from './tab';
-export { appendSection, isFence, moveLine, removeLine, tabBody } from './lines';
+export { appendSection, isFence, moveLine, removeLine, tabOwners } from './lines';
 export { parse } from './parse';
 export { serialize } from './serialize';
 export { chordsUsed, getDirective, plainText, walk } from './query';

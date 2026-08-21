@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { appendSection, isFence, moveLine, removeLine, tabBody } from '../src/index';
+import { appendSection, isFence, moveLine, removeLine, tabOwners } from '../src/index';
 
 const VERSE = [
   '{title: Wave}',
@@ -140,15 +140,15 @@ describe('appendSection', () => {
   });
 });
 
-describe('tabBody', () => {
-  it('marks a tab block’s content and its closing fence, but not its handle', () => {
+describe('tabOwners', () => {
+  it('points a block’s content and closing fence at the fence that opens them', () => {
     const lines = ['before', '{start_of_tab}', 'e|--5--|', 'B|--5--|', '{end_of_tab}', 'after'];
 
-    expect(tabBody(lines)).toEqual([false, false, true, true, true, false]);
+    expect(tabOwners(lines)).toEqual([null, null, 1, 1, 1, null]);
   });
 
-  it('marks nothing in a note with no tab', () => {
-    expect(tabBody(['{title: Wave}', '[D7M]a'])).toEqual([false, false]);
+  it('claims nothing in a note with no tab', () => {
+    expect(tabOwners(['{title: Wave}', '[D7M]a'])).toEqual([null, null]);
   });
 
   it('handles two tab blocks', () => {
@@ -162,10 +162,10 @@ describe('tabBody', () => {
       '{end_of_tab}',
     ];
 
-    expect(tabBody(lines)).toEqual([false, true, true, false, false, true, true]);
+    expect(tabOwners(lines)).toEqual([null, 0, 0, null, null, 4, 4]);
   });
 
   it('treats an unclosed block as running to the end, so its content is never offered as lyrics', () => {
-    expect(tabBody(['{start_of_tab}', 'e|--5--|'])).toEqual([false, true]);
+    expect(tabOwners(['{start_of_tab}', 'e|--5--|'])).toEqual([null, 0]);
   });
 });
