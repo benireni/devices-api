@@ -1,6 +1,7 @@
 import {
   addColumn,
   emptyTabGrid,
+  parse,
   parseTabGrid,
   removeColumn,
   renderTabGrid,
@@ -37,6 +38,8 @@ export default function TabScreen() {
     setHistory((current) => commit(current, next));
   };
   const [cell, setCell] = useState<{ string: number; column: number } | null>(null);
+  /** The opening fence's label, carried through so editing a grid does not erase it. */
+  const [label, setLabel] = useState<string | null>(null);
   const [unreadable, setUnreadable] = useState(false);
 
   const start = line === undefined ? -1 : Number.parseInt(line, 10);
@@ -49,6 +52,12 @@ export default function TabScreen() {
       if (start < 0) return;
       const end = source.findIndex((value, index) => index > start && value.startsWith('{end_of_tab'));
       const parsed = end === -1 ? null : parseTabGrid(source.slice(start + 1, end));
+
+      // Read the label back through the parser rather than off the fence text, so the
+      // one place that understands the format stays the one place that reads it.
+      const block =
+        end === -1 ? undefined : parse(source.slice(start, end + 1).join('\n')).chart.nodes[0];
+      if (block !== undefined && block.kind === 'tab') setLabel(block.label);
 
       if (parsed === null) {
         // Hand-written tab uses every spacing convention there is. Reflowing it into this
@@ -64,13 +73,18 @@ export default function TabScreen() {
   async function save() {
     if (lines === null) return;
 
-    const block = ['{start_of_tab}', ...renderTabGrid(grid), '{end_of_tab}'];
+    const open = label === null ? '{start_of_tab}' : `{start_of_tab: ${label}}`;
+    const block = [open, ...renderTabGrid(grid), '{end_of_tab}'];
     let next: string[];
 
     if (start < 0) {
       next = [...lines, '', ...block];
     } else {
       const end = lines.findIndex((value, index) => index > start && value.startsWith('{end_of_tab'));
+      // Without this the splice below would append the whole note to itself. Reaching
+      // here needs an unclosed fence, which also disables Save — but the guard belongs
+      // next to the splice, not three state transitions away.
+      if (end === -1) return;
       next = [...lines.slice(0, start), ...block, ...lines.slice(end + 1)];
     }
 
