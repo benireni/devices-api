@@ -1,7 +1,7 @@
 import { chordsUsed, getDirective, parse, serialize, setDirective } from '@qtdn/chordpro';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
 import { library, type Note } from '@/data';
 import { shareNote } from '@/data/share';
@@ -12,7 +12,6 @@ import { useAutoScroll } from '@/player/useAutoScroll';
 import {
   ChartView,
   ChordStrip,
-  Button,
   EmptyState,
   PromptSheet,
   ConfirmSheet,
@@ -34,6 +33,7 @@ export default function NoteScreen() {
   const [problem, setProblem] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [moving, setMoving] = useState(false);
+  const [acting, setActing] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const { snapshot } = useLibrary();
   const [speed, setSpeed] = useState(DEFAULT_SPEED);
@@ -174,7 +174,34 @@ export default function NoteScreen() {
 
   return (
     <Screen>
-      <Stack.Screen options={{ title: note?.title ?? '' }} />
+      {/*
+        Actions live in the header, not in the chart.
+
+        This screen is the performance surface and it auto-scrolls, so anything inside it
+        travels: at the end of a song a red Delete rode up under the thumb reaching for
+        Stop. The design said this screen shows no editing affordances; ChartView obeyed
+        and the screen hosting it did not.
+      */}
+      <Stack.Screen
+        options={{
+          title: note?.title ?? '',
+          headerRight: () =>
+            note === null ? null : (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Actions"
+                hitSlop={space.md}
+                onPress={() => {
+                  setActing(true);
+                }}
+              >
+                <Text variant="caption" tone="accent">
+                  Actions
+                </Text>
+              </Pressable>
+            ),
+        }}
+      />
       {failed && (
         <EmptyState
           title="Can’t open this note"
@@ -209,64 +236,11 @@ export default function NoteScreen() {
           )}
           <ChordStrip chords={chordsUsed(chart)} />
           <ChartView chart={chart} />
-          <View style={styles.actions}>
-            <Button
-              label="Edit"
-              variant="primary"
-              onPress={() => {
-                router.push(`/compose/${id}${suffix}`);
-              }}
-              style={{ flex: 1 }}
-            />
-            <Button
-              label="Source"
-              onPress={() => {
-                router.push(`/edit/${id}${suffix}`);
-              }}
-              style={{ flex: 1 }}
-            />
-          </View>
-
           {problem !== null && (
             <Text variant="caption" tone="danger" style={{ marginTop: space.md }}>
               {problem}
             </Text>
           )}
-
-          <View style={styles.actions}>
-            <Button
-              label="Rename"
-              onPress={() => {
-                setRenaming(true);
-              }}
-              style={{ flex: 1 }}
-            />
-            <Button
-              label="Move"
-              disabled={destinations.length === 0}
-              onPress={() => {
-                setMoving(true);
-              }}
-              style={{ flex: 1 }}
-            />
-            <Button
-              label="Share"
-              onPress={() => {
-                void shareNote(note.title, source.current ?? note.source).then((shared) => {
-                  if (!shared) setProblem('Sharing is not available on this device.');
-                });
-              }}
-              style={{ flex: 1 }}
-            />
-            <Button
-              label="Delete"
-              variant="danger"
-              onPress={() => {
-                setConfirming(true);
-              }}
-              style={{ flex: 1 }}
-            />
-          </View>
         </ScrollView>
       )}
 
@@ -283,6 +257,35 @@ export default function NoteScreen() {
           }}
         />
       )}
+
+      <OptionSheet
+        visible={acting}
+        title="This note"
+        options={[
+          { key: 'edit', label: 'Edit' },
+          { key: 'source', label: 'Source', subtitle: 'The ChordPro text itself' },
+          { key: 'rename', label: 'Rename' },
+          ...(destinations.length === 0 ? [] : [{ key: 'move', label: 'Move' }]),
+          { key: 'share', label: 'Share' },
+          { key: 'delete', label: 'Delete', subtitle: 'Removes it from this device' },
+        ]}
+        onSelect={(action) => {
+          setActing(false);
+          if (action === 'edit') router.push(`/compose/${id}${suffix}`);
+          if (action === 'source') router.push(`/edit/${id}${suffix}`);
+          if (action === 'rename') setRenaming(true);
+          if (action === 'move') setMoving(true);
+          if (action === 'delete') setConfirming(true);
+          if (action === 'share' && note !== null) {
+            void shareNote(note.title, source.current ?? note.source).then((shared) => {
+              if (!shared) setProblem('Sharing is not available on this device.');
+            });
+          }
+        }}
+        onCancel={() => {
+          setActing(false);
+        }}
+      />
 
       <PromptSheet
         visible={renaming}
@@ -328,5 +331,4 @@ export default function NoteScreen() {
 
 const styles = StyleSheet.create({
   content: { paddingBottom: space.xxl },
-  actions: { flexDirection: 'row', gap: space.md, marginTop: space.xl },
 });

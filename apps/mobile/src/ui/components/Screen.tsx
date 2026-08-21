@@ -13,7 +13,7 @@ export interface ScreenProps {
 /** Page shell: safe-area insets and the app background, applied in exactly one place. */
 export function Screen({ children, padded = true }: ScreenProps) {
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'left', 'right', 'bottom']}>
       <View style={padded ? styles.padded : styles.plain}>{children}</View>
     </SafeAreaView>
   );

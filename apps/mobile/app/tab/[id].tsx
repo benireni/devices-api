@@ -1,6 +1,7 @@
 import {
   addColumn,
   emptyTabGrid,
+  isTabEnd,
   parse,
   parseTabGrid,
   removeColumn,
@@ -16,7 +17,7 @@ import { library } from '@/data';
 import { begin, canUndo, commit, undo, type History } from '@/editing/history';
 import { log } from '@/observability';
 import { Button, Screen, Text } from '@/ui/components';
-import { color, radius, space } from '@/ui/tokens';
+import { HIT_SLOP, color, radius, space } from '@/ui/tokens';
 
 const FRETS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 const DEFAULT_COLUMNS = 8;
@@ -51,7 +52,7 @@ export default function TabScreen() {
       setLines(source);
 
       if (start < 0) return;
-      const end = source.findIndex((value, index) => index > start && value.startsWith('{end_of_tab'));
+      const end = source.findIndex((value, index) => index > start && isTabEnd(value));
       const parsed = end === -1 ? null : parseTabGrid(source.slice(start + 1, end));
 
       // Read the label back through the parser rather than off the fence text, so the
@@ -81,7 +82,7 @@ export default function TabScreen() {
     if (start < 0) {
       next = [...lines, '', ...block];
     } else {
-      const end = lines.findIndex((value, index) => index > start && value.startsWith('{end_of_tab'));
+      const end = lines.findIndex((value, index) => index > start && isTabEnd(value));
       // Without this the splice below would append the whole note to itself. Reaching
       // here needs an unclosed fence, which also disables Save — but the guard belongs
       // next to the splice, not three state transitions away.
@@ -221,8 +222,10 @@ const styles = StyleSheet.create({
   notice: { flex: 1, justifyContent: 'center', padding: space.lg },
   stringRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   cell: {
-    width: 36,
-    height: 36,
+    // The one place in the app you tap a small target dozens of times in a row, and the
+    // one place that used to sit under the 44pt floor.
+    width: HIT_SLOP,
+    height: HIT_SLOP,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.sm,
@@ -232,8 +235,8 @@ const styles = StyleSheet.create({
   cellSelected: { borderColor: color.accent, backgroundColor: color.surface },
   frets: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.xl },
   fret: {
-    minWidth: 44,
-    minHeight: 44,
+    minWidth: HIT_SLOP,
+    minHeight: HIT_SLOP,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: radius.sm,

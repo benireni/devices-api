@@ -1,5 +1,5 @@
 import type { Chart, LyricLine, Node, Section, TabBlock } from '@qtdn/chordpro';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { color, space } from '../tokens';
 import { Text } from './Text';
@@ -70,11 +70,21 @@ function TabView({ tab }: { tab: TabBlock }) {
           {tab.label}
         </Text>
       )}
-      {tab.lines.map((tabLine, index) => (
-        <Text key={index} variant="tab" tone="textMuted">
-          {tabLine}
-        </Text>
-      ))}
+      {/*
+        Horizontal scroll, never wrapping: column alignment *is* the content of a tab, and
+        a line wider than the column would otherwise fold and take the six strings out of
+        register. In `text` rather than `textMuted` because this is the notation you read
+        while playing, not a caption about it.
+      */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View>
+          {tab.lines.map((tabLine, index) => (
+            <Text key={index} variant="tab" numberOfLines={1}>
+              {tabLine}
+            </Text>
+          ))}
+        </View>
+      </ScrollView>
     </View>
   );
 }
