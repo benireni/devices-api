@@ -46,6 +46,12 @@ describe('plainText', () => {
     expect(plainText(parse('{title: Wave}\n{artist: Tom Jobim}').chart)).toBe('Wave\nTom Jobim');
   });
 
+  it('leaves qtdn’s own directives out, so an id fragment does not match every note', () => {
+    const chart = parse('{x_qtdn_id: 018f3a1c-7b2e-7000}\n{x_qtdn_scroll: 25}\n{title: Wave}').chart;
+
+    expect(plainText(chart)).toBe('Wave');
+  });
+
   it('includes section labels and tab content', () => {
     const chart = parse(
       ['{start_of_tab: Intro}', 'e|--5--|', '{end_of_tab}'].join('\n'),

@@ -1,4 +1,5 @@
 import type { Chart, Node } from './ast';
+import { QTDN_PREFIX } from './directives';
 
 /** Depth-first walk over every node in the chart, sections included. */
 export function* walk(chart: Chart): Generator<Node> {
@@ -59,7 +60,10 @@ export function plainText(chart: Chart): string {
     if (node.kind === 'lyric') {
       lines.push(node.segments.map((segment) => segment.text).join(''));
     }
-    if (node.kind === 'directive' && node.value !== null) {
+    // qtdn's own directives are plumbing, not writing: without this, searching a hex
+    // fragment matches every note through its id, and any future timestamp directive
+    // would make a year match the whole library.
+    if (node.kind === 'directive' && node.value !== null && !node.name.startsWith(QTDN_PREFIX)) {
       lines.push(node.value);
     }
     if (node.kind === 'section' && node.label !== null) {
