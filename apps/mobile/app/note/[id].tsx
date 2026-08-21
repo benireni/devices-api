@@ -91,7 +91,7 @@ export default function NoteScreen() {
     [id, from],
   );
 
-  const suffix = folder === undefined ? '' : `?folder=${folder}`;
+  const suffix = folder === undefined ? '' : `?folder=${encodeURIComponent(folder)}`;
 
   const destinations: Option[] = [
     ...(from === null ? [] : [{ key: '', label: 'No folder' }]),
@@ -116,6 +116,10 @@ export default function NoteScreen() {
   }
 
   async function remove() {
+    // The pending speed write still holds this note's text and its old folder. Left
+    // armed, the unmount flush below would write the file straight back after the
+    // delete, or leave a second copy at the old path after a move.
+    unsaved.current = null;
     await library.deleteNote(id, from);
     log.info('note.deleted', { id });
     setConfirming(false);
@@ -123,6 +127,7 @@ export default function NoteScreen() {
   }
 
   async function move(destination: string) {
+    unsaved.current = null;
     const to = destination === '' ? null : destination;
     await library.moveNote(id, from, to);
     log.info('note.moved', { id, to });
