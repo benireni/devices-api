@@ -27,8 +27,10 @@ interface Frame {
 }
 
 class Parser {
-  /** Remaining input. Lines are consumed from the front by {@link next}. */
+  /** The input, consumed left to right by {@link next}. */
   private readonly pending: string[];
+  /** How much of {@link pending} has been consumed. */
+  private cursor = 0;
   private readonly diagnostics: Diagnostic[] = [];
   private readonly root: Node[] = [];
   private readonly stack: Frame[] = [];
@@ -41,13 +43,17 @@ class Parser {
   /**
    * The next line, or `undefined` at end of input.
    *
-   * Consuming from a queue rather than indexing keeps "no more input" an ordinary
-   * value the caller has to handle, instead of an index check paired with a fallback
-   * that can never actually run.
+   * Reads through a cursor rather than shifting the array. `noUncheckedIndexedAccess`
+   * types the read as `string | undefined`, so "no more input" stays the ordinary value
+   * the caller handles — the same shape a queue gave, with no fallback and no extra
+   * branch. Shifting was O(n) per line once V8 stopped using its small-array fast path,
+   * which made parsing a long note quadratic: 20k lines took 733ms, and the library
+   * re-parses every note on every screen focus.
    */
   private next(): string | undefined {
-    const raw = this.pending.shift();
+    const raw = this.pending[this.cursor];
     if (raw !== undefined) {
+      this.cursor += 1;
       this.lineNo += 1;
     }
     return raw;
