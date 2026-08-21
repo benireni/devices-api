@@ -47,7 +47,17 @@ function SectionBlock({ section }: { section: Section }) {
 
 function LyricRow({ line }: { line: LyricLine }) {
   return (
-    <View style={styles.lyricRow}>
+    <View
+      // One element, one phrase. Each segment is its own view so the chord can sit in a
+      // column above the text, which meant a screen reader walked "F7M", "Olha", blank,
+      // "que", blank — a line of lyrics read out one syllable at a time.
+      accessible
+      accessibilityLabel={line.segments
+        .map((segment) => (segment.chord === null ? segment.text : `${segment.chord} ${segment.text}`))
+        .join('')
+        .trim()}
+      style={styles.lyricRow}
+    >
       {line.segments.map((segment, index) => (
         <View key={index} style={styles.segment}>
           <View style={styles.chordSlot}>

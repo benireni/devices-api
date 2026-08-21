@@ -37,7 +37,7 @@ export function Button({
         style,
       ]}
     >
-      <Text variant="caption" tone={variant === 'primary' ? 'background' : toneFor(variant)}>
+      <Text variant="label" tone={variant === 'primary' ? 'background' : toneFor(variant)}>
         {label}
       </Text>
     </Pressable>

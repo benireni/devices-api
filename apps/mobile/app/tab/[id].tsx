@@ -124,6 +124,11 @@ export default function TabScreen() {
                   {row.frets.map((fret, column) => (
                     <Pressable
                       key={column}
+                      accessibilityRole="button"
+                      accessibilityLabel={`String ${row.string}, position ${String(column + 1)}, ${
+                        fret === null ? 'not played' : `fret ${String(fret)}`
+                      }`}
+                      accessibilityState={{ selected: cell?.string === string && cell.column === column }}
                       onPress={() => {
                         setCell({ string, column });
                       }}
@@ -146,6 +151,8 @@ export default function TabScreen() {
             {FRETS.map((fret) => (
               <Pressable
                 key={fret}
+                accessibilityRole="button"
+                accessibilityLabel={`Fret ${String(fret)}`}
                 disabled={cell === null}
                 onPress={() => {
                   if (cell !== null) edit(setFret(grid, cell.string, cell.column, fret));
@@ -158,6 +165,8 @@ export default function TabScreen() {
               </Pressable>
             ))}
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Clear this position"
               disabled={cell === null}
               onPress={() => {
                 if (cell !== null) edit(setFret(grid, cell.string, cell.column, null));

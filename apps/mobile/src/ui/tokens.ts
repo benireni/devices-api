@@ -100,6 +100,12 @@ export const typography = {
   heading: { fontFamily: fontFamily.display, fontSize: 21, lineHeight: 28 },
   body: { fontFamily: fontFamily.prose, fontSize: 17, lineHeight: 24 },
   caption: { fontFamily: fontFamily.notationRegular, fontSize: 12, lineHeight: 16 },
+  /**
+   * Control labels. Bold and a size up from `caption`, which is what buttons used to
+   * borrow — so "Play", "Stop" and "Save" were the smallest, lightest type on a screen
+   * designed to be read at arm's length in a dim room.
+   */
+  label: { fontFamily: fontFamily.notation, fontSize: 14, lineHeight: 18 },
   /** Lyrics on the playing screen: larger than body, readable at arm's length. */
   lyric: { fontFamily: fontFamily.prose, fontSize: 19, lineHeight: 26 },
   /** Chord glyphs. Bold monospace so they sit clearly above the lyric. */
