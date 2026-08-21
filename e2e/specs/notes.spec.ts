@@ -176,6 +176,22 @@ test.describe('auto-scroll', () => {
     await expect(app.button('Play')).toBeDisabled();
   });
 
+  test('keeps a speed that was set moments before a rename', async ({ app }) => {
+    await app.tap('Faster');
+    await app.tap('Faster');
+    await expect(app.text('35')).toBeVisible();
+
+    // Rename used to build from the copy in state, which the debounced speed write had
+    // already moved past — so renaming erased the speed the user had just set.
+    await app.noteAction('Rename');
+    await app.field('Title').fill('Passagens');
+    await app.tapInSheet('Rename');
+
+    await app.back();
+    await app.tapRow('Passagens');
+    await expect(app.text('35')).toBeVisible();
+  });
+
   test('speed stops at its limits', async ({ app }) => {
     // 25 down in steps of 5.
     for (let step = 0; step < 5; step += 1) await app.tap('Slower');

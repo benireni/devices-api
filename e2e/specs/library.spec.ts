@@ -78,12 +78,50 @@ test.describe('library', () => {
     await expect(app.button('Sort: Title')).toBeVisible();
   });
 
+  test('never leaves a note called Untitled', async ({ app }) => {
+    await app.open();
+    await app.tap('New note');
+
+    // Creating used to go straight to the editor with the note already named
+    // "Untitled", and the editor had no way to change it.
+    await expect(app.sheet()).toContainText('New note');
+    await expect(app.sheet().getByRole('button', { name: 'Create' })).toBeDisabled();
+
+    await app.field('Title').fill('Sabiá');
+    await app.tapInSheet('Create');
+    await app.tap('Save');
+
+    await expect(app.row('Sabiá')).toBeVisible();
+    await expect(app.row('Untitled')).toHaveCount(0);
+  });
+
   test('a search result opens its note', async ({ app }) => {
     await app.open();
     await app.field('Search notes').fill('corcovado');
     await app.tapRow('Corcovado');
 
     await expect(app.text('Um cantinho, um violão')).toBeVisible();
+  });
+
+  test('sorts the notes inside a folder too', async ({ app }) => {
+    await app.open();
+    await app.tapRow('Repertório');
+    await app.tap('New note');
+    await app.field('Title').fill('Zíngaro');
+    await app.tapInSheet('Create');
+    await app.tap('Save');
+
+    // Last by title, newest by creation — so the two orders disagree about it.
+    expect(await position(app, 'Corcovado')).toBeLessThan(await position(app, 'Zíngaro'));
+
+    await app.back();
+    await app.tap('Sort: Title');
+    await app.tapInSheet('Recently added');
+    await app.tapRow('Repertório');
+
+    // The order is one persisted setting, so it governs every listing rather than only
+    // the screen that carries the control.
+    expect(await position(app, 'Zíngaro')).toBeLessThan(await position(app, 'Corcovado'));
   });
 
   test('says so when there is nothing in it', async ({ app }) => {
@@ -104,20 +142,22 @@ test.describe('library', () => {
   test('sorting reorders the unfiled notes', async ({ app }) => {
     await app.open();
 
-    // A second unfiled note, so that the two orders disagree: "Untitled" sorts after
+    // A second unfiled note, so the two orders disagree: "Zíngaro" sorts after
     // "Ideia de sábado" by title and before it by recency.
     await app.tap('New note');
+    await app.field('Title').fill('Zíngaro');
+    await app.tapInSheet('Create');
     await expect(app.button('Add line')).toBeVisible();
     await app.tap('Save');
-    await expect(app.row('Untitled')).toBeVisible();
+    await expect(app.row('Zíngaro')).toBeVisible();
 
-    expect(await position(app, 'Ideia de sábado')).toBeLessThan(await position(app, 'Untitled'));
+    expect(await position(app, 'Ideia de sábado')).toBeLessThan(await position(app, 'Zíngaro'));
 
     await app.tap('Sort: Title');
     await app.tapInSheet('Recently added');
 
     await expect(app.button('Sort: Recently added')).toBeVisible();
-    expect(await position(app, 'Untitled')).toBeLessThan(await position(app, 'Ideia de sábado'));
+    expect(await position(app, 'Zíngaro')).toBeLessThan(await position(app, 'Ideia de sábado'));
   });
 });
 

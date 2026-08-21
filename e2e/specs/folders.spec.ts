@@ -72,14 +72,16 @@ test.describe('folders', () => {
   test('take a new note straight into themselves', async ({ app }) => {
     await app.tapRow('Estudos');
     await app.tap('New note');
+    await app.field('Title').fill('Ligia');
+    await app.tapInSheet('Create');
     await expect(app.button('Add line')).toBeVisible();
     await app.tap('Save');
 
-    await expect(app.row('Untitled')).toBeVisible();
+    await expect(app.row('Ligia')).toBeVisible();
 
     // Filed, not loose: the library lists it under the folder rather than beside it.
     await app.back();
-    await expect(app.row('Untitled')).toHaveCount(0);
+    await expect(app.row('Ligia')).toHaveCount(0);
     await expect(app.row('Estudos')).toContainText('2');
   });
 });

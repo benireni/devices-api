@@ -28,9 +28,9 @@ test.describe('the chord builder', () => {
     await app.tapInSheet('Done');
     await app.tap('Save');
 
-    // On the chart, above the word it was placed on. The chord strip has it too, but it
-    // scrolls horizontally and a late chord sits off the edge.
-    await expect(app.text('Am7(9)')).toBeVisible();
+    // Twice: over the word, and in the strip — which now lists every chord in the song
+    // rather than only the ones it has a diagram for.
+    await expect(app.text('Am7(9)')).toHaveCount(2);
   });
 
   test('puts the bass note last, after a slash', async ({ app }) => {
@@ -88,7 +88,7 @@ test.describe('the chord builder', () => {
     await app.tapInSheet('Keep it');
     await app.tap('Save');
 
-    await expect(app.text('C°7M')).toBeVisible();
+    await expect(app.text('C°7M')).toHaveCount(2);
   });
 
   test('takes a rewritable chord over only on an explicit press', async ({ app }) => {
@@ -109,7 +109,7 @@ test.describe('the chord builder', () => {
     await app.tapInSheet('Done');
     await app.tap('Save');
 
-    await expect(app.text('C7(9,13)')).toBeVisible();
+    await expect(app.text('C7(9,13)')).toHaveCount(2);
   });
 
   test('removes a chord', async ({ app }) => {
@@ -269,6 +269,19 @@ test.describe('the line menu', () => {
     await expect(app.text('Olha que coisa mais')).toBeVisible();
   });
 
+  test('moves chords with their words when text is typed in front of them', async ({ app }) => {
+    await app.longPress(app.text('coisa'));
+    await app.tapInSheet('Edit text');
+    await app.field('Lyrics').fill('Ah, Olha que coisa mais linda');
+    await app.tap('Done');
+    await app.tap('Save');
+
+    // Offsets used to be held still, so this put F7M on "Ah," and G7(9) mid-word.
+    await expect(
+      app.page.getByLabel('Ah, F7M Olha que coisa mais G7(9) linda', { exact: true }),
+    ).toBeVisible();
+  });
+
   test('edits a line as text, keeping its chords', async ({ app }) => {
     await app.longPress(app.text('coisa'));
     await app.tapInSheet('Edit text');
@@ -280,7 +293,7 @@ test.describe('the line menu', () => {
     // both chords that were on the line are still on it.
     await expect(app.text('rara')).toBeVisible();
     await expect(app.text('F7M')).toHaveCount(2);
-    await expect(app.text('G7(9)')).toBeVisible();
+    await expect(app.text('G7(9)')).toHaveCount(2);
   });
 });
 

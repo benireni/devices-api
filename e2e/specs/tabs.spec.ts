@@ -102,6 +102,26 @@ test.describe('the tab grid', () => {
     await expect(app.text('Voicing')).toBeVisible();
   });
 
+  test('scrolls a wide tab rather than wrapping it', async ({ app }) => {
+    await app.open();
+    await app.tapRow('Repertório');
+    await app.tapRow('Corcovado');
+    await app.noteAction('Source');
+    const wide = ['e', 'B', 'G', 'D', 'A', 'E']
+      .map((string) => `${string}|${'-5-'.repeat(20)}|`)
+      .join('\n');
+    const source = app.field('{title: …}');
+    await source.fill(`${await source.inputValue()}\n{start_of_tab}\n${wide}\n{end_of_tab}`);
+    await app.tap('Save');
+
+    // Column alignment is the content of a tab. A line wider than the screen must scroll,
+    // because wrapping folds it and takes the six strings out of register.
+    const row = app.page.getByText(/^e\|(-5-)+\|$/).first();
+    const box = await row.boundingBox();
+    expect(box, 'the top string is rendered').not.toBeNull();
+    expect(box?.height ?? 0, 'one line tall, not wrapped').toBeLessThan(30);
+  });
+
   test('leaves tab it did not write alone', async ({ app }) => {
     await app.open();
     await app.tapRow('Estudos');
