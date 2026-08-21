@@ -7,7 +7,7 @@ import {
   setChordAt,
   setText,
   slots,
-  tabBody,
+  tabOwners,
   type LyricLine,
 } from '@qtdn/chordpro';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -109,7 +109,7 @@ export default function ComposeScreen() {
   }
 
   const current = target === null || lines === null ? null : lyricAt(lines, target.line);
-  const inTab = useMemo(() => tabBody(lines ?? []), [lines]);
+  const owners = useMemo(() => tabOwners(lines ?? []), [lines]);
 
   return (
     <Screen>
@@ -120,7 +120,7 @@ export default function ComposeScreen() {
           <Line
             key={index}
             source={line}
-            inTab={inTab[index] ?? false}
+            inTab={(owners[index] ?? null) !== null}
             editing={editing === index}
             onEdit={() => {
               setMenu(index);
@@ -134,7 +134,10 @@ export default function ComposeScreen() {
               setTarget({ line: index, offset, label });
             }}
             onTab={() => {
-              void openTab(index);
+              // A row inside the block opens the block, not itself. Passing the row's own
+              // index read the note from the wrong line, and the tab editor then reported
+              // a grid it had written itself as unreadable.
+              void openTab(owners[index] ?? index);
             }}
           />
         ))}
