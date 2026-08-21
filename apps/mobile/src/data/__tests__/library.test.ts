@@ -202,6 +202,28 @@ describe('Library', () => {
     }
   });
 
+  /**
+   * `qtdn://` is a registered scheme, so a folder name or a note id can arrive from
+   * outside the app. Creating a folder was the only operation that checked.
+   */
+  it('refuses to escape the root through any operation that builds a path', async () => {
+    const id = await library.createNote(null, 'Song');
+
+    await expect(library.deleteFolder('..')).rejects.toThrow('not a valid folder name');
+    await expect(library.readNote(id, '..')).rejects.toThrow('not a valid folder name');
+    await expect(library.saveNote(id, 'a/b', 'x')).rejects.toThrow('not a valid folder name');
+    await expect(library.moveNote(id, null, '..')).rejects.toThrow('not a valid folder name');
+    await expect(library.deleteNote(id, '..')).rejects.toThrow('not a valid folder name');
+  });
+
+  it('refuses a note id that is not one it issued', async () => {
+    for (const id of ['../../etc/passwd', 'not-a-uuid', '']) {
+      await expect(library.readNote(id, null)).rejects.toThrow('not a valid note id');
+      await expect(library.saveNote(id, null, 'x')).rejects.toThrow('not a valid note id');
+      await expect(library.deleteNote(id, null)).rejects.toThrow('not a valid note id');
+    }
+  });
+
   it('refuses to create a folder that already exists', async () => {
     await library.createFolder('Practice');
     await expect(library.createFolder('Practice')).rejects.toThrow('already exists');

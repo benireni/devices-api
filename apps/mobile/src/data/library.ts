@@ -7,7 +7,7 @@ import {
   type Chart,
 } from '@qtdn/chordpro';
 
-import { uuidv7 } from './ids';
+import { isNoteId, uuidv7 } from './ids';
 import { matches } from './search';
 import type { Environment, FileStore } from './ports';
 
@@ -229,11 +229,23 @@ export class Library {
     }
   }
 
+  /**
+   * Every path is built here, so every path is validated here.
+   *
+   * Guarding only `createFolder` and `renameFolder` left read, save, move and delete
+   * composing paths straight out of route parameters — and `qtdn://` is a registered
+   * scheme, so those parameters come from outside the app. Validating at the two
+   * functions that actually concatenate is the only version of this check that cannot be
+   * bypassed by adding a caller.
+   */
   private folderPath(name: string): string {
-    return `${this.root}/${name}`;
+    return `${this.root}/${assertFolderName(name)}`;
   }
 
   private notePath(id: string, folder: string | null): string {
+    if (!isNoteId(id)) {
+      throw new Error(`"${id}" is not a valid note id.`);
+    }
     return `${folder === null ? this.root : this.folderPath(folder)}/${id}${EXTENSION}`;
   }
 }
