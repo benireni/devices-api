@@ -26,7 +26,8 @@ export default function FolderScreen() {
   async function rename(next: string) {
     try {
       await library.renameFolder(name, next);
-      log.info('folder.renamed', { from: name, to: next });
+      // Folder names are song and album names. `observability/CLAUDE.md`: never log content.
+      log.info('folder.renamed', {});
       setRenaming(false);
       router.replace(`/folder/${encodeURIComponent(next.trim())}`);
     } catch (cause) {
@@ -37,7 +38,7 @@ export default function FolderScreen() {
 
   async function remove() {
     await library.deleteFolder(name);
-    log.info('folder.deleted', { name, notes: notes.length });
+    log.info('folder.deleted', { notes: notes.length });
     setDeleting(false);
     router.back();
   }

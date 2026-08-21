@@ -7,6 +7,7 @@ import {
   type Chart,
 } from '@qtdn/chordpro';
 
+import { log } from '../observability';
 import { isNoteId, uuidv7 } from './ids';
 import { matches } from './search';
 import type { Environment, FileStore } from './ports';
@@ -116,21 +117,34 @@ export class Library {
    * would put the whole library's text in memory to serve a list of titles.
    */
   async search(query: string): Promise<NoteSummary[]> {
+    const started = Date.now();
     const { entries } = await this.scan();
 
     // The words a reader sees, not the source: a chord splits the word it sits on, so
     // searching the raw text cannot find a lyric that happens to carry one. Chord symbols
     // are appended separately so they stay searchable in their own right.
-    return entries
+    const hits = entries
       .filter(({ chart }) => matches(`${plainText(chart)}\n${chordsUsed(chart).join(' ')}`, query))
       .map(({ summary }) => summary);
+
+    log.info('library.searched', { ms: Date.now() - started, notes: entries.length, hits: hits.length });
+    return hits;
   }
 
   async readNote(id: string, folder: string | null): Promise<Note> {
     const path = this.notePath(id, folder);
     const source = await this.files.read(path);
+    const { chart, diagnostics } = parse(source);
+
+    // Named in DESIGN.md as a day-one event and never emitted. It is the first thing you
+    // want to know when a chart renders wrong and there is no laptop in the room.
+    const [first] = diagnostics;
+    if (first !== undefined) {
+      log.warn('note.parse.diagnostics', { id, count: diagnostics.length, first: first.code });
+    }
+
     return {
-      ...summarize(id, folder, parse(source).chart),
+      ...summarize(id, folder, chart),
       updatedAt: await this.files.modifiedAt(path),
       source,
     };
@@ -158,6 +172,7 @@ export class Library {
 
     await this.ensureFolder(folder);
     await this.files.write(this.notePath(id, folder), source);
+    log.info('note.created', { id, folder: folder === null ? 'root' : 'filed' });
     return id;
   }
 
@@ -170,6 +185,9 @@ export class Library {
   async saveNote(id: string, folder: string | null, source: string): Promise<void> {
     await this.ensureFolder(folder);
     await this.files.write(this.notePath(id, folder), source);
+    // Every write to the file that *is* the model. Without it, a note that goes missing
+    // leaves no record that a save was ever attempted.
+    log.info('note.saved', { id, bytes: source.length });
   }
 
   async deleteNote(id: string, folder: string | null): Promise<void> {

@@ -1,6 +1,7 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 
+import { log } from '@/observability';
 import {
   DEFAULT_ORDER,
   library,
@@ -28,7 +29,18 @@ export function useLibrary() {
 
   const reload = useCallback(async () => {
     await libraryReady;
+    const started = Date.now();
     const [next, preferences] = await Promise.all([library.snapshot(), settings.read()]);
+
+    // The trigger metric for everything this app defers. `data/CLAUDE.md` says SQLite
+    // arrives "when a scan is measurably slow on a real device" — which nothing could
+    // establish, because nothing was ever timed on one.
+    log.info('library.scanned', {
+      ms: Date.now() - started,
+      notes: next.notes.length,
+      folders: next.folders.length,
+    });
+
     setSnapshot(next);
     setOrderState(preferences.order);
     setLoading(false);
