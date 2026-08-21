@@ -81,7 +81,7 @@ test.describe('library', () => {
       await app.tapInSheet('Delete');
     }
     await app.tapRow('Ideia de sábado');
-    await app.tap('Delete');
+    await app.noteAction('Delete');
     await app.tapInSheet('Delete');
 
     await expect(app.text('No notes yet')).toBeVisible();
@@ -99,10 +99,10 @@ test.describe('library', () => {
 
     expect(await position(app, 'Ideia de sábado')).toBeLessThan(await position(app, 'Untitled'));
 
-    await app.tap('Title');
+    await app.tap('Sort: Title');
     await app.tapInSheet('Recently added');
 
-    await expect(app.button('Recently added')).toBeVisible();
+    await expect(app.button('Sort: Recently added')).toBeVisible();
     expect(await position(app, 'Untitled')).toBeLessThan(await position(app, 'Ideia de sábado'));
   });
 });

@@ -5,7 +5,7 @@ test.describe('the raw editor', () => {
     await app.open();
     await app.tapRow('Repertório');
     await app.tapRow('Insensatez');
-    await app.tap('Source');
+    await app.noteAction('Source');
   });
 
   test('shows the file itself, and says it parses', async ({ app }) => {

@@ -103,6 +103,18 @@ export class App {
   }
 
   /**
+   * Runs one of the note screen's actions.
+   *
+   * They live behind a header control rather than in the chart, because the chart
+   * auto-scrolls and anything inside it travels under the reader's thumb. Deliberately
+   * does not wait for the sheet to close: several of these open another one.
+   */
+  async noteAction(label: string): Promise<void> {
+    await this.tap('Actions');
+    await this.click(this.sheet().getByRole('button', { name: label }).first());
+  }
+
+  /**
    * Taps a chord-builder chip.
    *
    * Root and Bass offer the same twelve notes. The rows render in the order the picker
@@ -121,6 +133,9 @@ export class App {
    * that with room to spare.
    */
   async longPress(target: Locator): Promise<void> {
+    // A sheet still sliding away swallows the hold and the press lands as a tap, which
+    // in the editor means the chord picker opens instead of the line menu.
+    await this.settle();
     await target.scrollIntoViewIfNeeded();
     const box = await target.boundingBox();
     expect(box, 'the element to long-press is on screen').not.toBeNull();
@@ -130,7 +145,9 @@ export class App {
     const y = box.y + box.height / 2;
     await this.page.mouse.move(x, y);
     await this.page.mouse.down();
-    await this.page.waitForTimeout(800);
+    // Outlasts React Native's 500ms threshold with room to spare. The wait is the
+    // gesture here, which is the one place this suite sleeps on purpose.
+    await this.page.waitForTimeout(900);
     await this.page.mouse.up();
   }
 
@@ -145,7 +162,9 @@ export class App {
   }
 
   private async click(target: Locator): Promise<void> {
-    await target.scrollIntoViewIfNeeded();
+    // No separate scroll step: `click` scrolls into view itself and retries while the
+    // element is detached, which a standalone `scrollIntoViewIfNeeded` does not — and
+    // every sheet in this app remounts its contents as it opens.
     await target.click();
   }
 }

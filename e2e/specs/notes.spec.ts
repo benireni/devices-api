@@ -18,7 +18,7 @@ test.describe('a note', () => {
 
   test('renames by rewriting its own title directive', async ({ app }) => {
     await app.tapRow('Garota de Ipanema');
-    await app.tap('Rename');
+    await app.noteAction('Rename');
     await app.field('Title').fill('Garota renomeada');
     await app.tapInSheet('Rename');
 
@@ -32,7 +32,7 @@ test.describe('a note', () => {
 
   test('moves to another folder', async ({ app }) => {
     await app.tapRow('Corcovado');
-    await app.tap('Move');
+    await app.noteAction('Move');
     await app.tapInSheet('Estudos');
 
     // Moving returns to the folder the note has just left.
@@ -45,15 +45,15 @@ test.describe('a note', () => {
 
   test('asks before deleting, and says what will be lost', async ({ app }) => {
     await app.tapRow('Insensatez');
-    await app.tap('Delete');
+    await app.noteAction('Delete');
 
     await expect(app.text('Delete note?')).toBeVisible();
     await expect(app.sheet()).toContainText('cannot be undone');
 
     await app.tapInSheet('Cancel');
-    await expect(app.button('Delete')).toBeVisible();
+    await expect(app.button('Actions')).toBeVisible();
 
-    await app.tap('Delete');
+    await app.noteAction('Delete');
     await app.tapInSheet('Delete');
 
     await expect(app.row('Insensatez')).toHaveCount(0);
@@ -69,8 +69,10 @@ test.describe('a note', () => {
     await app.tapInSheet('Delete');
 
     await app.tapRow('Ideia de sábado');
+    await app.tap('Actions');
 
-    await expect(app.button('Move')).toBeDisabled();
+    // Not disabled — absent. There is nowhere to move it to, so the row is not offered.
+    await expect(app.sheet().getByRole('button', { name: 'Move' })).toHaveCount(0);
   });
 });
 
@@ -84,7 +86,7 @@ test.describe('a pending speed change', () => {
     await app.tapRow('Corcovado');
     // Arms the debounced write, which holds this note's text and its folder.
     await app.tap('Faster');
-    await app.tap('Delete');
+    await app.noteAction('Delete');
     await app.tapInSheet('Delete');
 
     await expect(app.row('Corcovado')).toHaveCount(0);
@@ -101,7 +103,7 @@ test.describe('a pending speed change', () => {
   test('does not leave a copy of a moved note behind', async ({ app }) => {
     await app.tapRow('Corcovado');
     await app.tap('Faster');
-    await app.tap('Move');
+    await app.noteAction('Move');
     await app.tapInSheet('Estudos');
 
     await app.page.waitForTimeout(1200);
@@ -118,8 +120,10 @@ test.describe('a pending speed change', () => {
 test.describe('auto-scroll', () => {
   test.beforeEach(async ({ app }) => {
     await app.open();
-    await app.tapRow('Repertório');
-    await app.tapRow('Garota de Ipanema');
+    // The longest chart in the demo library: three sections and a tab block. Playback
+    // needs something that does not already fit the screen.
+    await app.tapRow('Estudos');
+    await app.tapRow('Acordes de passagem');
   });
 
   test('starts and stops', async ({ app }) => {
@@ -139,7 +143,7 @@ test.describe('auto-scroll', () => {
 
     // Speed is written into the note, so leaving and coming back has to bring it along.
     await app.back();
-    await app.tapRow('Garota de Ipanema');
+    await app.tapRow('Acordes de passagem');
     await expect(app.text('35')).toBeVisible();
   });
 
@@ -157,7 +161,7 @@ test.describe('auto-scroll', () => {
     await app.tap('Play');
     await expect(app.button('Stop')).toBeVisible();
 
-    await app.tap('Edit');
+    await app.noteAction('Edit');
     await expect(app.button('Add line')).toBeVisible();
     await app.back();
 

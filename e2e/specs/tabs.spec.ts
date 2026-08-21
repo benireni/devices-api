@@ -7,7 +7,7 @@ test.describe('the tab grid', () => {
     await app.open();
     await app.tapRow('Repertório');
     await app.tapRow('Corcovado');
-    await app.tap('Edit');
+    await app.noteAction('Edit');
     await app.tap('Add tab');
 
     // The top string, first column: the grid starts empty, so every cell reads as unplayed.
@@ -25,7 +25,7 @@ test.describe('the tab grid', () => {
     await app.open();
     await app.tapRow('Repertório');
     await app.tapRow('Corcovado');
-    await app.tap('Edit');
+    await app.noteAction('Edit');
     await app.tap('Add tab');
 
     await app.tap('More columns');
@@ -40,7 +40,7 @@ test.describe('the tab grid', () => {
     await app.open();
     await app.tapRow('Repertório');
     await app.tapRow('Corcovado');
-    await app.tap('Edit');
+    await app.noteAction('Edit');
     await app.tap('Add tab');
 
     await expect(app.button('Undo')).toBeDisabled();
@@ -57,7 +57,7 @@ test.describe('the tab grid', () => {
     await app.open();
     await app.tapRow('Repertório');
     await app.tapRow('Corcovado');
-    await app.tap('Edit');
+    await app.noteAction('Edit');
     await app.tap('Add tab');
     await app.tapText('–');
     await app.tapText('5');
@@ -76,7 +76,7 @@ test.describe('the tab grid', () => {
     await app.open();
     await app.tapRow('Repertório');
     await app.tapRow('Corcovado');
-    await app.tap('Edit');
+    await app.noteAction('Edit');
     await app.tap('Add tab');
     await app.tapText('–');
     await app.tapText('5');
@@ -84,7 +84,7 @@ test.describe('the tab grid', () => {
     await app.tap('Save');
 
     // Give the block a label the only way the app can today, then edit the grid again.
-    await app.tap('Source');
+    await app.noteAction('Source');
     const source = app.field('{title: …}');
     await source.fill(
       (await source.inputValue()).replace('{start_of_tab}', '{start_of_tab: Voicing}'),
@@ -92,7 +92,7 @@ test.describe('the tab grid', () => {
     await app.tap('Save');
     await expect(app.text('Voicing')).toBeVisible();
 
-    await app.tap('Edit');
+    await app.noteAction('Edit');
     await gridRow(app).click();
     await app.tapText('–');
     await app.tapText('7');
@@ -106,7 +106,7 @@ test.describe('the tab grid', () => {
     await app.open();
     await app.tapRow('Estudos');
     await app.tapRow('Acordes de passagem');
-    await app.tap('Edit');
+    await app.noteAction('Edit');
     await app.tapText('{start_of_tab: Voicing de Dm7(9) sem tônica} — tap to edit');
 
     // Hand-written tab uses every spacing convention there is. Reflowing it into this

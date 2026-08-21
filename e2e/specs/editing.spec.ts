@@ -7,7 +7,7 @@ test.describe('the chord builder', () => {
     await app.open();
     await app.tapRow('Repertório');
     await app.tapRow('Garota de Ipanema');
-    await app.tap('Edit');
+    await app.noteAction('Edit');
     await expect(app.button('Add line')).toBeVisible();
   });
 
@@ -74,11 +74,11 @@ test.describe('the chord builder', () => {
     // `C°7M` reads back fine but the builder has no major seventh to hang on a
     // diminished chord, so it would silently become `C°` on the first chip press.
     await app.back();
-    await app.tap('Source');
+    await app.noteAction('Source');
     const source = app.field('{title: …}');
     await source.fill(`${await source.inputValue()}\n[C°7M]diminuto`);
     await app.tap('Save');
-    await app.tap('Edit');
+    await app.noteAction('Edit');
     await app.tapText('diminuto');
 
     await expect(app.sheet()).toContainText('C°7M');
@@ -93,11 +93,11 @@ test.describe('the chord builder', () => {
 
   test('takes a rewritable chord over only on an explicit press', async ({ app }) => {
     await app.back();
-    await app.tap('Source');
+    await app.noteAction('Source');
     const source = app.field('{title: …}');
     await source.fill(`${await source.inputValue()}\n[C7(13,9)]tensoes`);
     await app.tap('Save');
-    await app.tap('Edit');
+    await app.noteAction('Edit');
     await app.tapText('tensoes');
 
     // Reordering is not tone loss, and the copy says so.
@@ -127,7 +127,7 @@ test.describe('the structured editor', () => {
     await app.open();
     await app.tapRow('Repertório');
     await app.tapRow('Garota de Ipanema');
-    await app.tap('Edit');
+    await app.noteAction('Edit');
     await expect(app.button('Add line')).toBeVisible();
   });
 
@@ -187,7 +187,7 @@ test.describe('a chord in a gap', () => {
   test('sits between words, where the change actually falls', async ({ app }) => {
     await app.open();
     await app.tapRow('Ideia de sábado');
-    await app.tap('Edit');
+    await app.noteAction('Edit');
     await expect(app.button('Add line')).toBeVisible();
 
     // A bare progression is all gaps: there is no word under the chord at all.
@@ -201,7 +201,7 @@ test.describe('the line menu', () => {
     await app.open();
     await app.tapRow('Repertório');
     await app.tapRow('Garota de Ipanema');
-    await app.tap('Edit');
+    await app.noteAction('Edit');
     await expect(app.button('Add line')).toBeVisible();
   });
 
