@@ -386,6 +386,10 @@ function Line({
       {slots(node).map((slot) => (
         <Pressable
           key={slot.offset}
+          accessibilityRole="button"
+          accessibilityLabel={`${slot.chords.length === 0 ? 'No chord' : slot.chords.join(' then ')} over ${
+            slot.kind === 'word' ? slot.text : 'this beat'
+          }`}
           onPress={() => {
             onSlot(slot.offset, slot.kind === 'word' ? slot.text : 'this beat');
           }}
@@ -396,7 +400,9 @@ function Line({
           style={styles.slot}
         >
           <Text variant="chord" tone="chord">
-            {slot.chord ?? ' '}
+            {/* A stack is marked rather than hidden: two chords on one syllable is
+                unusual enough that silently showing one of them reads as a bug. */}
+            {slot.chords.length > 1 ? slot.chords.join(' ') : (slot.chord ?? ' ')}
           </Text>
           {/* An empty gap has nothing to show, so it renders a thin rule to stay
               tappable. A gap that already holds a chord does not: the chord is the

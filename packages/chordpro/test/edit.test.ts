@@ -76,9 +76,9 @@ describe('stacked chords', () => {
 describe('slots', () => {
   it('offers each word with the chord pinned to its first character', () => {
     expect(slots(line('[Am6]Um cantinho'))).toEqual([
-      { offset: 0, text: 'Um', kind: 'word', chord: 'Am6' },
-      { offset: 2, text: ' ', kind: 'gap', chord: null },
-      { offset: 3, text: 'cantinho', kind: 'word', chord: null },
+      { offset: 0, text: 'Um', kind: 'word', chord: 'Am6', chords: ['Am6'] },
+      { offset: 2, text: ' ', kind: 'gap', chord: null, chords: [] },
+      { offset: 3, text: 'cantinho', kind: 'word', chord: null, chords: [] },
     ]);
   });
 
@@ -92,20 +92,20 @@ describe('slots', () => {
 
   it('surfaces a chord pinned inside a word instead of hiding it', () => {
     expect(slots(line('can[G]tinho'))).toEqual([
-      { offset: 0, text: 'can', kind: 'word', chord: null },
-      { offset: 3, text: 'tinho', kind: 'word', chord: 'G' },
+      { offset: 0, text: 'can', kind: 'word', chord: null, chords: [] },
+      { offset: 3, text: 'tinho', kind: 'word', chord: 'G', chords: ['G'] },
     ]);
   });
 
   it('surfaces a chord pinned past the last character', () => {
     const trailing = slots(line('graça [Gb7(#11)]'));
 
-    expect(trailing.at(-1)).toEqual({ offset: 6, text: '', kind: 'gap', chord: 'Gb7(#11)' });
+    expect(trailing.at(-1)).toEqual({ offset: 6, text: '', kind: 'gap', chord: 'Gb7(#11)', chords: ['Gb7(#11)'] });
   });
 
   it('offers one slot on an empty line, so a chord can be placed before any lyric', () => {
     expect(slots({ kind: 'lyric', segments: [{ chord: null, text: '' }] })).toEqual([
-      { offset: 0, text: '', kind: 'gap', chord: null },
+      { offset: 0, text: '', kind: 'gap', chord: null, chords: [] },
     ]);
   });
 
@@ -205,5 +205,28 @@ describe('setDirective', () => {
 
   it('does nothing when removing a directive that is not there', () => {
     expect(text(setDirective(chart('{title: A}'), 'artist', null))).toBe('{title: A}');
+  });
+});
+
+describe('slots, on a stacked offset', () => {
+  it('shows the chord adjacent to the text, not the first of the stack', () => {
+    const [slot] = slots(line('[C][Am7]word'));
+
+    expect(slot?.chord).toBe('Am7');
+    expect(slot?.chords).toEqual(['C', 'Am7']);
+  });
+
+  it('reports a single chord as a stack of one', () => {
+    const [slot] = slots(line('[C]word'));
+
+    expect(slot?.chord).toBe('C');
+    expect(slot?.chords).toEqual(['C']);
+  });
+
+  it('reports no chord as an empty stack', () => {
+    const [slot] = slots(line('word'));
+
+    expect(slot?.chord).toBeNull();
+    expect(slot?.chords).toEqual([]);
   });
 });

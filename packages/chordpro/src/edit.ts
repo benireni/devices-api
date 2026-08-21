@@ -24,7 +24,16 @@ export interface Slot {
   readonly text: string;
   /** `gap` is whitespace or the end of the line; `word` is anything else. */
   readonly kind: 'word' | 'gap';
+  /**
+   * The chord shown here: the last of the stack, which is the one adjacent to the text.
+   *
+   * `[C][Am]word` sounds Am over the word — C belongs to whatever came before it. Showing
+   * the first meant the editor displayed a chord that is not the one being played, and
+   * replacing it destroyed a chord the user had never been shown.
+   */
   readonly chord: string | null;
+  /** Every chord pinned at this offset, in written order. Usually one. */
+  readonly chords: readonly string[];
 }
 
 interface Decomposed {
@@ -109,7 +118,8 @@ export function slots(line: LyricLine): Slot[] {
     offset,
     text: text.slice(offset, ordered[index + 1] ?? text.length),
     kind: /\s/.test(text.charAt(offset)) || offset >= text.length ? ('gap' as const) : ('word' as const),
-    chord: chords.get(offset)?.[0] ?? null,
+    chord: last(chords.get(offset) ?? []),
+    chords: chords.get(offset) ?? [],
   }));
 }
 
@@ -223,4 +233,16 @@ export function setDirective(chart: Chart, name: string, value: string | null): 
   const nodes: Node[] = [...chart.nodes];
   nodes.splice(insertAt, 0, { kind: 'directive', name, value });
   return { nodes };
+}
+
+/**
+ * The final element, or `null`.
+ *
+ * Written as a loop rather than `at(-1) ?? null`: on a non-empty array that fallback can
+ * never run, and an unreachable branch is one this codebase deletes rather than tests.
+ */
+function last(values: readonly string[]): string | null {
+  let result: string | null = null;
+  for (const value of values) result = value;
+  return result;
 }
