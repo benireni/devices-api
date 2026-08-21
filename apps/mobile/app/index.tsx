@@ -11,6 +11,7 @@ import {
   EmptyState,
   ListRow,
   OptionSheet,
+  PromptSheet,
   Screen,
   Text,
   TextField,
@@ -23,6 +24,7 @@ const SEARCH_DEBOUNCE_MS = 200;
 export default function LibraryScreen() {
   const { snapshot, notes, order, setOrder, loading, reload } = useLibrary();
   const [ordering, setOrdering] = useState(false);
+  const [naming, setNaming] = useState(false);
   const [query, setQuery] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
   const [results, setResults] = useState<NoteSummary[]>([]);
@@ -70,8 +72,9 @@ export default function LibraryScreen() {
     }
   }
 
-  async function newNote() {
-    const id = await library.createNote(null, 'Untitled');
+  async function newNote(title: string) {
+    setNaming(false);
+    const id = await library.createNote(null, title.trim());
     await reload();
     router.push(`/compose/${id}`);
   }
@@ -169,6 +172,19 @@ export default function LibraryScreen() {
         </ScrollView>
       )}
 
+      <PromptSheet
+        visible={naming}
+        title="New note"
+        placeholder="Title"
+        submitLabel="Create"
+        onSubmit={(title) => {
+          void newNote(title);
+        }}
+        onCancel={() => {
+          setNaming(false);
+        }}
+      />
+
       <OptionSheet
         visible={ordering}
         title="Sort notes by"
@@ -207,7 +223,7 @@ export default function LibraryScreen() {
           label="New note"
           variant="primary"
           onPress={() => {
-            void newNote();
+            setNaming(true);
           }}
           style={{ flex: 1 }}
         />

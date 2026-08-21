@@ -23,6 +23,7 @@ export default function FolderScreen() {
   const notes = sorted.filter((note) => note.folder === name);
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [naming, setNaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function rename(next: string) {
@@ -56,8 +57,9 @@ export default function FolderScreen() {
     }
   }
 
-  async function newNote() {
-    const id = await library.createNote(name, 'Untitled');
+  async function newNote(title: string) {
+    setNaming(false);
+    const id = await library.createNote(name, title.trim());
     await reload();
     router.push(`/compose/${id}?folder=${encodeURIComponent(name)}`);
   }
@@ -118,11 +120,24 @@ export default function FolderScreen() {
           label="New note"
           variant="primary"
           onPress={() => {
-            void newNote();
+            setNaming(true);
           }}
           style={{ flex: 1 }}
         />
       </View>
+
+      <PromptSheet
+        visible={naming}
+        title="New note"
+        placeholder="Title"
+        submitLabel="Create"
+        onSubmit={(title) => {
+          void newNote(title);
+        }}
+        onCancel={() => {
+          setNaming(false);
+        }}
+      />
 
       <PromptSheet
         visible={renaming}
