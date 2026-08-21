@@ -163,6 +163,20 @@ describe('setText', () => {
   it('keeps a chord pinned exactly at the end of the text', () => {
     expect(render(setText(line('[C]ab [G]cd'), 'ab '))).toBe('[C]ab [G]');
   });
+
+  it('moves a chord with its word when text is typed in front of the line', () => {
+    expect(render(setText(line('[F7M]Olha que [G7(9)]linda'), 'Ah, Olha que linda'))).toBe(
+      'Ah, [F7M]Olha que [G7(9)]linda',
+    );
+  });
+
+  it('shifts only the chords after an insertion, leaving earlier ones alone', () => {
+    expect(render(setText(line('[C]ab [G]cd'), 'ab, cd'))).toBe('[C]ab, [G]cd');
+  });
+
+  it('joins a chord onto the stack it lands on rather than evicting it', () => {
+    expect(render(setText(line('[C]xa[G]y'), 'y'))).toBe('[C][G]y');
+  });
 });
 
 describe('setDirective', () => {

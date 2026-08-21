@@ -133,18 +133,65 @@ export function setChordAt(line: LyricLine, offset: number, chord: string | null
   return compose({ text, chords: next });
 }
 
-/** Replaces the line's words while keeping every chord at its character offset. */
+/**
+ * Replaces the line's words, moving each chord with the text it was pinned to.
+ *
+ * Offsets are diffed rather than kept: the edit is reduced to one replaced range between
+ * a common prefix and a common suffix, and every chord after that range shifts by the
+ * length change. Holding offsets still instead meant typing a word at the front of a line
+ * slid every chord onto the wrong syllable — `[F7M]Olha que coisa mais [G7(9)]linda`
+ * became `[F7M]Ah, Olha que coisa m[G7(9)]ais linda`.
+ *
+ * A chord whose text is deleted goes with it. That is the rule this module already
+ * documented, and here it stops being a special case: the chord is inside the replaced
+ * range, so there is nowhere to move it to.
+ *
+ * A chord landing where another already sits joins its stack rather than evicting it.
+ */
 export function setText(line: LyricLine, text: string): LyricLine {
-  const { chords } = decompose(line);
+  const { text: before, chords } = decompose(line);
+
+  const prefix = commonPrefix(before, text);
+  const suffix = commonSuffix(before, text, prefix);
+  /** Where the replaced range ends in the old text. Equal to `prefix` for pure inserts. */
+  const end = before.length - suffix;
+  const delta = text.length - before.length;
+
   const kept = new Map<number, readonly string[]>();
+  const pin = (offset: number, chord: readonly string[]) => {
+    kept.set(offset, [...(kept.get(offset) ?? []), ...chord]);
+  };
 
   for (const [offset, chord] of chords) {
-    if (offset <= text.length) {
-      kept.set(offset, chord);
+    // Nothing was removed, so a chord at the caret belongs to the text being pushed
+    // right — typing in front of a word keeps its chord over that word.
+    if (end === prefix) {
+      pin(offset >= prefix ? offset + delta : offset, chord);
+      continue;
     }
+
+    if (offset <= prefix) pin(offset, chord);
+    else if (offset >= end) pin(offset + delta, chord);
   }
 
   return compose({ text, chords: kept });
+}
+
+function commonPrefix(a: string, b: string): number {
+  const limit = Math.min(a.length, b.length);
+  let index = 0;
+  while (index < limit && a.charAt(index) === b.charAt(index)) index += 1;
+  return index;
+}
+
+/** Counted from the end, and never overlapping the prefix already matched. */
+function commonSuffix(a: string, b: string, prefix: number): number {
+  const limit = Math.min(a.length, b.length) - prefix;
+  let index = 0;
+  while (index < limit && a.charAt(a.length - 1 - index) === b.charAt(b.length - 1 - index)) {
+    index += 1;
+  }
+  return index;
 }
 
 /**
