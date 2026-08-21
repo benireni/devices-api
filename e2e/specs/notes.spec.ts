@@ -74,6 +74,47 @@ test.describe('a note', () => {
   });
 });
 
+test.describe('a pending speed change', () => {
+  test.beforeEach(async ({ app }) => {
+    await app.open();
+    await app.tapRow('Repertório');
+  });
+
+  test('does not bring a deleted note back', async ({ app }) => {
+    await app.tapRow('Corcovado');
+    // Arms the debounced write, which holds this note's text and its folder.
+    await app.tap('+');
+    await app.tap('Delete');
+    await app.tapInSheet('Delete');
+
+    await expect(app.row('Corcovado')).toHaveCount(0);
+
+    // Outliving the timer is the point of the test, so the wait is the subject rather
+    // than a workaround: the flush used to re-create the file it had just deleted.
+    await app.page.waitForTimeout(1200);
+    await app.back();
+    await app.tapRow('Repertório');
+
+    await expect(app.row('Corcovado')).toHaveCount(0);
+  });
+
+  test('does not leave a copy of a moved note behind', async ({ app }) => {
+    await app.tapRow('Corcovado');
+    await app.tap('+');
+    await app.tap('Move');
+    await app.tapInSheet('Estudos');
+
+    await app.page.waitForTimeout(1200);
+    await app.back();
+    await app.tapRow('Repertório');
+    await expect(app.row('Corcovado')).toHaveCount(0);
+
+    await app.back();
+    await app.tapRow('Estudos');
+    await expect(app.row('Corcovado')).toBeVisible();
+  });
+});
+
 test.describe('auto-scroll', () => {
   test.beforeEach(async ({ app }) => {
     await app.open();

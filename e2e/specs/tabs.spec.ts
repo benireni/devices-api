@@ -1,3 +1,5 @@
+import type { Page } from '@playwright/test';
+
 import { expect, test } from '../support/fixtures';
 
 test.describe('the tab grid', () => {
@@ -51,6 +53,55 @@ test.describe('the tab grid', () => {
     await expect(app.text('7')).toHaveCount(1);
   });
 
+  test('re-opens from the grid itself, not only from its fence', async ({ app }) => {
+    await app.open();
+    await app.tapRow('Repertório');
+    await app.tapRow('Corcovado');
+    await app.tap('Edit');
+    await app.tap('Add tab');
+    await app.tapText('–');
+    await app.tapText('5');
+    await app.tap('Save');
+
+    // The six rows are the obvious target; the fence is a thin caption above them.
+    // Tapping a row used to send the editor to that row's line, where it found no grid
+    // and said the app had not written a tab the app had just written.
+    await gridRow(app).click();
+
+    await expect(app.text('5')).toHaveCount(2);
+    await expect(app.button('Save')).toBeEnabled();
+  });
+
+  test('keeps a tab’s label when a fret changes', async ({ app }) => {
+    await app.open();
+    await app.tapRow('Repertório');
+    await app.tapRow('Corcovado');
+    await app.tap('Edit');
+    await app.tap('Add tab');
+    await app.tapText('–');
+    await app.tapText('5');
+    await app.tap('Save');
+    await app.tap('Save');
+
+    // Give the block a label the only way the app can today, then edit the grid again.
+    await app.tap('Source');
+    const source = app.field('{title: …}');
+    await source.fill(
+      (await source.inputValue()).replace('{start_of_tab}', '{start_of_tab: Voicing}'),
+    );
+    await app.tap('Save');
+    await expect(app.text('Voicing')).toBeVisible();
+
+    await app.tap('Edit');
+    await gridRow(app).click();
+    await app.tapText('–');
+    await app.tapText('7');
+    await app.tap('Save');
+    await app.tap('Save');
+
+    await expect(app.text('Voicing')).toBeVisible();
+  });
+
   test('leaves tab it did not write alone', async ({ app }) => {
     await app.open();
     await app.tapRow('Estudos');
@@ -65,3 +116,11 @@ test.describe('the tab grid', () => {
     await expect(app.button('Undo')).toBeDisabled();
   });
 });
+
+/** The top string of a grid the editor wrote, whatever width it ended up. */
+function gridRow(app: { page: Page }) {
+  return app.page
+    .getByText(/^e\|-5-+\|$/)
+    .filter({ visible: true })
+    .first();
+}

@@ -50,6 +50,20 @@ test.describe('library', () => {
     await expect(app.row('Repertório')).toBeVisible();
   });
 
+  test('does not match a note by its internal id', async ({ app }) => {
+    await app.open();
+    await app.tapRow('Ideia de sábado');
+    const id = new URL(app.page.url()).pathname.split('/').pop() ?? '';
+    expect(id).not.toBe('');
+
+    await app.back();
+    await app.field('Search notes').fill(id.slice(0, 8));
+
+    // The id lives in the note as a directive; search reads the note's words, not its
+    // plumbing, or every note matches any hex fragment.
+    await expect(app.text('No matches')).toBeVisible();
+  });
+
   test('a search result opens its note', async ({ app }) => {
     await app.open();
     await app.field('Search notes').fill('corcovado');
