@@ -83,7 +83,7 @@ test.describe('a pending speed change', () => {
   test('does not bring a deleted note back', async ({ app }) => {
     await app.tapRow('Corcovado');
     // Arms the debounced write, which holds this note's text and its folder.
-    await app.tap('+');
+    await app.tap('Faster');
     await app.tap('Delete');
     await app.tapInSheet('Delete');
 
@@ -100,7 +100,7 @@ test.describe('a pending speed change', () => {
 
   test('does not leave a copy of a moved note behind', async ({ app }) => {
     await app.tapRow('Corcovado');
-    await app.tap('+');
+    await app.tap('Faster');
     await app.tap('Move');
     await app.tapInSheet('Estudos');
 
@@ -133,8 +133,8 @@ test.describe('auto-scroll', () => {
   test('speed is adjustable and belongs to the song', async ({ app }) => {
     await expect(app.text('25')).toBeVisible();
 
-    await app.tap('+');
-    await app.tap('+');
+    await app.tap('Faster');
+    await app.tap('Faster');
     await expect(app.text('35')).toBeVisible();
 
     // Speed is written into the note, so leaving and coming back has to bring it along.
@@ -143,11 +143,40 @@ test.describe('auto-scroll', () => {
     await expect(app.text('35')).toBeVisible();
   });
 
+  test('stops itself when the chart ends', async ({ app }) => {
+    // Fastest available, so the end of a short chart arrives in seconds.
+    for (let step = 0; step < 19; step += 1) await app.tap('Faster');
+    await app.tap('Play');
+
+    // Reverting to Play is what releases the keep-awake lock. Nobody has to reach for
+    // the phone at the end of a song.
+    await expect(app.button('Play')).toBeVisible({ timeout: 20_000 });
+  });
+
+  test('stops when an editor opens over the chart', async ({ app }) => {
+    await app.tap('Play');
+    await expect(app.button('Stop')).toBeVisible();
+
+    await app.tap('Edit');
+    await expect(app.button('Add line')).toBeVisible();
+    await app.back();
+
+    await expect(app.button('Play')).toBeVisible();
+  });
+
+  test('offers nothing to play on a chart that already fits', async ({ app }) => {
+    await app.back();
+    await app.back();
+    await app.tapRow('Ideia de sábado');
+
+    await expect(app.button('Play')).toBeDisabled();
+  });
+
   test('speed stops at its limits', async ({ app }) => {
     // 25 down in steps of 5.
-    for (let step = 0; step < 5; step += 1) await app.tap('−');
+    for (let step = 0; step < 5; step += 1) await app.tap('Slower');
 
     await expect(app.text('0')).toBeVisible();
-    await expect(app.button('−')).toBeDisabled();
+    await expect(app.button('Slower')).toBeDisabled();
   });
 });

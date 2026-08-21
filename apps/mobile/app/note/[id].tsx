@@ -13,6 +13,7 @@ import {
   ChartView,
   ChordStrip,
   Button,
+  EmptyState,
   PromptSheet,
   ConfirmSheet,
   OptionSheet,
@@ -29,6 +30,7 @@ const SETTLE_MS = 600;
 export default function NoteScreen() {
   const { id, folder } = useLocalSearchParams<{ id: string; folder?: string }>();
   const [note, setNote] = useState<Note | null>(null);
+  const [failed, setFailed] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [moving, setMoving] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -38,7 +40,9 @@ export default function NoteScreen() {
   const source = useRef<string | null>(null);
   const unsaved = useRef<string | null>(null);
   const from = folder ?? null;
-  const { running, setRunning, scroller, syncOffset } = useAutoScroll(speed);
+  const { running, setRunning, scroller, syncOffset, measure, playable } = useAutoScroll(speed);
+  const content = useRef(0);
+  const viewport = useRef(0);
 
   /**
    * Re-read on every focus, not once on mount.
@@ -49,12 +53,26 @@ export default function NoteScreen() {
    */
   useFocusEffect(
     useCallback(() => {
-      void library.readNote(id, folder ?? null).then((value) => {
-        setNote(value);
-        source.current = value.source;
-        setSpeed(readSpeed(getDirective(parse(value.source).chart, 'x_qtdn_scroll')));
-      });
-    }, [id, folder]),
+      void library.readNote(id, folder ?? null).then(
+        (value) => {
+          setNote(value);
+          setFailed(false);
+          source.current = value.source;
+          setSpeed(readSpeed(getDirective(parse(value.source).chart, 'x_qtdn_scroll')));
+        },
+        (cause: unknown) => {
+          log.error('note.read.failed', cause, { id });
+          setFailed(true);
+        },
+      );
+
+      // An editor is pushed on top of this screen rather than replacing it, so without
+      // this the chart kept scrolling underneath the editor and the keep-awake lock was
+      // never released.
+      return () => {
+        setRunning(false);
+      };
+    }, [id, folder, setRunning]),
   );
 
   /**
@@ -140,11 +158,25 @@ export default function NoteScreen() {
   return (
     <Screen>
       <Stack.Screen options={{ title: note?.title ?? '' }} />
+      {failed && (
+        <EmptyState
+          title="Can’t open this note"
+          hint="The file is missing or unreadable. It may have been deleted on another screen."
+        />
+      )}
       {note !== null && chart !== null && (
         <ScrollView
           ref={scroller}
           onScroll={(event) => {
             syncOffset(event.nativeEvent.contentOffset.y);
+          }}
+          onContentSizeChange={(_, height) => {
+            content.current = height;
+            measure(height, viewport.current);
+          }}
+          onLayout={(event) => {
+            viewport.current = event.nativeEvent.layout.height;
+            measure(content.current, viewport.current);
           }}
           scrollEventThrottle={16}
           contentContainerStyle={styles.content}
@@ -217,6 +249,7 @@ export default function NoteScreen() {
         <ScrollControl
           running={running}
           speed={speed}
+          playable={playable}
           onToggle={() => {
             setRunning(!running);
           }}

@@ -8,6 +8,8 @@ import { Text } from './Text';
 export interface ScrollControlProps {
   running: boolean;
   speed: number;
+  /** False when the chart fits the screen, so there is nothing to scroll. */
+  playable?: boolean;
   onToggle: () => void;
   onAdjust: (steps: number) => void;
 }
@@ -19,11 +21,18 @@ export interface ScrollControlProps {
  * while the other is on the neck. Speed sits beside it rather than behind a settings
  * screen — it is adjusted while playing or not at all.
  */
-export function ScrollControl({ running, speed, onToggle, onAdjust }: ScrollControlProps) {
+export function ScrollControl({
+  running,
+  speed,
+  playable = true,
+  onToggle,
+  onAdjust,
+}: ScrollControlProps) {
   return (
     <View style={styles.bar}>
       <Button
         label="−"
+        accessibilityLabel="Slower"
         disabled={speed <= MIN_SPEED}
         onPress={() => {
           onAdjust(-1);
@@ -39,6 +48,7 @@ export function ScrollControl({ running, speed, onToggle, onAdjust }: ScrollCont
       </View>
       <Button
         label="+"
+        accessibilityLabel="Faster"
         disabled={speed >= MAX_SPEED}
         onPress={() => {
           onAdjust(1);
@@ -47,6 +57,7 @@ export function ScrollControl({ running, speed, onToggle, onAdjust }: ScrollCont
       <Button
         label={running ? 'Stop' : 'Play'}
         variant="primary"
+        disabled={!playable}
         onPress={onToggle}
         style={{ flex: 1 }}
       />

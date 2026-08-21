@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_SPEED,
+  MAX_FRAME_MS,
   MAX_SPEED,
   MIN_SPEED,
   SPEED_STEP,
   adjustSpeed,
+  hasReachedEnd,
   advance,
   clampSpeed,
   readSpeed,
@@ -86,5 +88,33 @@ describe('shouldResync', () => {
   it('adopts a position the user dragged to', () => {
     expect(shouldResync(100, 400)).toBe(true);
     expect(shouldResync(400, 100)).toBe(true);
+  });
+});
+
+describe('hasReachedEnd', () => {
+  it('is false while there is chart left below the fold', () => {
+    expect(hasReachedEnd(0, 2000, 800)).toBe(false);
+    expect(hasReachedEnd(1199, 2000, 800)).toBe(false);
+  });
+
+  it('is true once the last line is on screen', () => {
+    expect(hasReachedEnd(1200, 2000, 800)).toBe(true);
+    expect(hasReachedEnd(1400, 2000, 800)).toBe(true);
+  });
+
+  it('is true for a chart that already fits, which has nowhere to go', () => {
+    expect(hasReachedEnd(0, 500, 800)).toBe(true);
+  });
+});
+
+describe('advance over a long gap', () => {
+  it('caps a frame at the longest a running app produces', () => {
+    // Five minutes backgrounded at 25px/s would otherwise jump 7500px in one frame.
+    expect(advance(25, 300_000)).toBe(advance(25, MAX_FRAME_MS));
+    expect(advance(25, 300_000)).toBeCloseTo(25);
+  });
+
+  it('leaves an ordinary frame alone', () => {
+    expect(advance(60, 16)).toBeCloseTo(0.96);
   });
 });

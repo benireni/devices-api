@@ -1,10 +1,12 @@
 import { Pressable, StyleSheet, type ViewStyle } from 'react-native';
 
-import { color, radius, space } from '../tokens';
+import { HIT_SLOP, color, radius, space } from '../tokens';
 import { Text } from './Text';
 
 export interface ButtonProps {
   label: string;
+  /** Spoken name, when the label is a glyph like `−` that reads as punctuation. */
+  accessibilityLabel?: string;
   onPress: () => void;
   /** `primary` is the identity green; use at most one per screen. */
   variant?: 'primary' | 'secondary' | 'danger';
@@ -14,6 +16,7 @@ export interface ButtonProps {
 
 export function Button({
   label,
+  accessibilityLabel,
   onPress,
   variant = 'secondary',
   disabled = false,
@@ -22,6 +25,7 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
@@ -46,7 +50,10 @@ function toneFor(variant: 'secondary' | 'danger') {
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 44,
+    minHeight: HIT_SLOP,
+    // Width as well as height: a one-glyph label like `−` was landing at 39pt, and the
+    // two controls that miss the floor are the two pressed mid-song.
+    minWidth: HIT_SLOP,
     paddingHorizontal: space.lg,
     borderRadius: radius.md,
     alignItems: 'center',

@@ -2,7 +2,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ScrollView } from 'react-native';
 
-import { advance, shouldResync } from './scroll';
+import { advance, hasReachedEnd, shouldResync } from './scroll';
 
 /**
  * Drives a ScrollView down the page while playing.
@@ -19,6 +19,8 @@ export function useAutoScroll(speed: number) {
   const [running, setRunning] = useState(false);
   const scroller = useRef<ScrollView | null>(null);
   const offset = useRef(0);
+  /** What there is to scroll, reported by the view. */
+  const [bounds, setBounds] = useState({ content: 0, viewport: 0 });
 
   useEffect(() => {
     if (!running) return;
@@ -35,6 +37,15 @@ export function useAutoScroll(speed: number) {
       offset.current += advance(speed, now - previous);
       previous = now;
       scroller.current?.scrollTo({ y: offset.current, animated: false });
+
+      // The song is over. Stopping here is what releases the keep-awake lock, which
+      // otherwise held the screen on at the bottom of a finished chart until someone
+      // picked the phone up — the gesture auto-scroll exists to avoid.
+      if (hasReachedEnd(offset.current, bounds.content, bounds.viewport)) {
+        setRunning(false);
+        return;
+      }
+
       frame = requestAnimationFrame(tick);
     };
 
@@ -43,7 +54,7 @@ export function useAutoScroll(speed: number) {
       cancelAnimationFrame(frame);
       void deactivateKeepAwake(KEEP_AWAKE_TAG);
     };
-  }, [running, speed]);
+  }, [running, speed, bounds]);
 
   /** Called from the ScrollView so a manual scroll does not fight the automatic one. */
   const syncOffset = useCallback((y: number) => {
@@ -52,5 +63,17 @@ export function useAutoScroll(speed: number) {
     }
   }, []);
 
-  return { running, setRunning, scroller, syncOffset };
+  /** Measured from the view, so a chart with nothing to scroll cannot be played. */
+  const measure = useCallback((content: number, viewport: number) => {
+    setBounds({ content, viewport });
+  }, []);
+
+  return {
+    running,
+    setRunning,
+    scroller,
+    syncOffset,
+    measure,
+    playable: !hasReachedEnd(0, bounds.content, bounds.viewport),
+  };
 }
