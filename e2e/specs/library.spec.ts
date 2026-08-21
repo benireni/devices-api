@@ -64,6 +64,20 @@ test.describe('library', () => {
     await expect(app.text('No matches')).toBeVisible();
   });
 
+  test('keeps sorting reachable when every note is filed', async ({ app }) => {
+    await app.open();
+    await app.tapRow('Ideia de sábado');
+    await app.noteAction('Move');
+    await app.tapInSheet('Estudos');
+
+    // Moving returns to the library, which now lists no unfiled notes at all.
+    await expect(app.row('Ideia de sábado')).toHaveCount(0);
+
+    // The control used to live in the Notes section header, which only renders when
+    // something is unfiled — so a tidy library hid an app-wide setting for good.
+    await expect(app.button('Sort: Title')).toBeVisible();
+  });
+
   test('a search result opens its note', async ({ app }) => {
     await app.open();
     await app.field('Search notes').fill('corcovado');

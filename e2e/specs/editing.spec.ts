@@ -166,6 +166,40 @@ test.describe('the structured editor', () => {
     await expect(app.text('e o mar')).toBeVisible();
   });
 
+  test('does not show the note’s own plumbing', async ({ app }) => {
+    // The default editor used to open on `{x_qtdn_id: …}` — a UUID, first thing.
+    await expect(app.page.getByText(/x_qtdn_/)).toHaveCount(0);
+  });
+
+  test('asks before throwing away unsaved work', async ({ app }) => {
+    await app.tapText('coisa');
+    await app.tapChip('Eb');
+    await app.tapInSheet('Done');
+
+    await app.tap('Close');
+
+    await expect(app.text('Discard changes?')).toBeVisible();
+    await app.tapInSheet('Cancel');
+    await expect(app.text('Ebm')).toHaveCount(0);
+    await expect(app.button('Save')).toBeVisible();
+  });
+
+  test('leaves without asking when nothing has changed', async ({ app }) => {
+    await app.tap('Close');
+
+    await expect(app.button('Actions')).toBeVisible();
+  });
+
+  test('inserts a line where the song needs one', async ({ app }) => {
+    await app.longPress(app.text('coisa'));
+    await app.tapInSheet('Insert line above');
+    await app.field('Lyrics').fill('uma linha nova');
+    await app.tap('Done');
+    await app.tap('Save');
+
+    await expect(app.text('uma linha nova')).toBeVisible();
+  });
+
   test('adds a section', async ({ app }) => {
     await app.tap('Add section');
     await app.tapInSheet('Chorus');
@@ -211,6 +245,8 @@ test.describe('the line menu', () => {
     await app.longPress(app.text('coisa'));
 
     await expect(app.sheet()).toContainText('Move up');
+    // Names the line, so a mis-aimed press is obvious before anything is destroyed.
+    await expect(app.sheet()).toContainText('Olha que coisa mais linda');
   });
 
   test('moves a line', async ({ app }) => {
