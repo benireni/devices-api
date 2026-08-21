@@ -99,10 +99,48 @@ export function shapeKey(spec: ChordSpec): ShapeKey | null {
   return minor ? 'min6' : '6';
 }
 
+/**
+ * The shapes a guitarist actually plays in first position.
+ *
+ * The movable forms are complete and correct and, for these chords, wrong in practice:
+ * deriving `C` from the A form puts it at the third fret as a barre, which is not what
+ * anyone plays and is worse than showing nothing. Open strings cannot be derived from a
+ * movable shape, so the common ones are named.
+ *
+ * Keyed by pitch class and shape, so `Db` and `C#` find the same box.
+ */
+const OPEN_FORMS: Readonly<Record<string, Shape>> = {
+  '0:maj': [null, 3, 2, 0, 1, 0], // C
+  '0:dom7': [null, 3, 2, 3, 1, 0], // C7
+  '0:maj7': [null, 3, 2, 0, 0, 0], // C7M
+  '2:maj': [null, null, 0, 2, 3, 2], // D
+  '2:min': [null, null, 0, 2, 3, 1], // Dm
+  '2:dom7': [null, null, 0, 2, 1, 2], // D7
+  '2:min7': [null, null, 0, 2, 1, 1], // Dm7
+  '4:maj': [0, 2, 2, 1, 0, 0], // E
+  '4:min': [0, 2, 2, 0, 0, 0], // Em
+  '4:dom7': [0, 2, 0, 1, 0, 0], // E7
+  '4:min7': [0, 2, 0, 0, 0, 0], // Em7
+  '5:maj7': [null, null, 3, 2, 1, 0], // F7M
+  '7:maj': [3, 2, 0, 0, 0, 3], // G
+  '7:dom7': [3, 2, 0, 0, 0, 1], // G7
+  '9:maj': [null, 0, 2, 2, 2, 0], // A
+  '9:min': [null, 0, 2, 2, 1, 0], // Am
+  '9:dom7': [null, 0, 2, 0, 2, 0], // A7
+  '9:min7': [null, 0, 2, 0, 1, 0], // Am7
+  '11:min': [null, 2, 4, 4, 3, 2], // Bm
+  '11:dom7': [null, 2, 1, 2, 0, 2], // B7
+};
+
 export function fingering(spec: ChordSpec): Fingering | null {
   const key = shapeKey(spec);
   const pitch = PITCHES[spec.root];
   if (key === null || pitch === undefined) return null;
+
+  // First position wins where it exists: it is what a guitarist reaches for, and a
+  // diagram nobody plays teaches the wrong shape.
+  const open = OPEN_FORMS[`${String(pitch)}:${key}`];
+  if (open !== undefined) return { baseFret: 0, frets: open };
 
   const aShape = A_FORM[key];
   const aFret = (pitch - OPEN_A + 12) % 12;
