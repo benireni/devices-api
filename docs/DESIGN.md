@@ -1,6 +1,9 @@
 # qtdn — Design Document
 
-> Status: design locked, pre-implementation.
+> Status: Phase 1 shipped. Sections stating *intent* still hold. Where a section describes
+> the code and the two disagree, the code is right and the section is stale — §5.1 and §10
+> were written before implementation and describe a layout and a toolchain that were not
+> adopted.
 > A minimalist iOS app for quick acoustic-guitar annotations: chords over lyrics, tabs,
 > short audio references, organized in folders.
 
@@ -125,8 +128,15 @@ E|---------------------|
   simply ignore what it doesn't know.
 - `x_qtdn_id` is a **UUIDv7** — time-sortable, collision-free across devices, and the
   join key that makes phase-2 sync possible without a migration.
-- `x_qtdn_rev` is a monotonically increasing integer per note. v1 only increments it;
-  phase 2 uses it to detect divergence.
+- `x_qtdn_rev` and `x_qtdn_updated` are **declared but deliberately not written yet**.
+  D3 originally justified deferring sync on the grounds that ids *and revisions* were
+  present from day one; only the id turned out to be. Stamping a revision on save means
+  parsing and re-serializing the note, and `saveNote` writes bytes verbatim on purpose —
+  the raw editor holds half-typed text that a round trip would reformat under the user.
+  The cost of deferring is bounded and worth stating: notes written before revisions
+  begin will have none, so sync must read absent as zero and cannot tell "never revised"
+  from "revised by an older client". D4's generic directives mean no format migration is
+  needed to start writing them.
 - Chords are inline in square brackets, attached to the character position they sit above.
 - Tab blocks are opaque monospace text between tab fences. The parser preserves them
   byte-for-byte and never reflows them.
