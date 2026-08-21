@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { chordsUsed, parse } from '@qtdn/chordpro';
+import { chordsUsed, isExactlyEditable, parse } from '@qtdn/chordpro';
 
 import { MemoryFileStore } from '../adapters/memoryFileStore';
 import { seedDemoLibrary } from '../demo';
@@ -45,8 +45,31 @@ describe('seedDemoLibrary', () => {
       for (const chord of chordsUsed(parse(source).chart)) chords.add(chord);
     }
 
-    for (const expected of ['Cm7(b9)', 'C#°', 'G7(b13)', 'Gb7(#11)', 'Am7(b5)', 'Dm7/C']) {
+    for (const expected of ['Cm7(b9)', 'C#°', 'G7(b13)', 'Gb7(#11)', 'Am7(b5)', 'Dm7/C', 'C6(9)']) {
       expect(chords).toContain(expected);
     }
+  });
+
+  /**
+   * The vocabulary rule in CLAUDE.md, checked instead of asserted: the picker's list, the
+   * demo charts and the property-test generators must agree, or the tests prove nothing
+   * about the symbols the app actually produces. Four demo chords used to fail this, and
+   * the picker silently offered to replace each of them with C.
+   */
+  it('uses only chords the builder can hold as written', async () => {
+    const library = new Library(new MemoryFileStore(), deterministicEnvironment(), '/notes');
+    await seedDemoLibrary(library);
+
+    const { notes } = await library.snapshot();
+    const offenders: string[] = [];
+
+    for (const note of notes) {
+      const { source } = await library.readNote(note.id, note.folder);
+      for (const chord of chordsUsed(parse(source).chart)) {
+        if (!isExactlyEditable(chord)) offenders.push(chord);
+      }
+    }
+
+    expect(offenders).toEqual([]);
   });
 });

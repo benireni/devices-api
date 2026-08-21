@@ -77,9 +77,19 @@ returns `null` for anything outside that vocabulary rather than mangling an impo
 symbol into the nearest representable chord.
 
 The parser treats a chord as opaque text between brackets, so this is a vocabulary
-decision rather than a format one — but the picker's list, the demo charts and the
-property-test generators must all agree, or the tests prove nothing about the symbols the
-app actually produces.
+decision rather than a format one.
+
+**The picker's list and the demo charts must agree**, or the tests prove nothing about the
+symbols the app actually produces. `isExactlyEditable` is the predicate and
+`demo.test.ts` enforces it over every chord in the shipped library. The property-test
+generators are deliberately **wider** than the vocabulary and must stay that way: their
+job is proving the parser survives a chart pasted from the web, which is full of `dim`,
+`aug` and `maj7`. A generator narrowed to what the picker can build would prove nothing
+about the input most likely to break it.
+
+Roots carry fifteen spellings for twelve pitches, because a passing chord is written sharp
+ascending and flat descending — `C6 C#° Dm7 D#° Em7` going up, `Em7 Eb° Dm7 Db° C6` coming
+back down. Both are correct, and neither is a respelling of the other.
 
 ## Out of scope — do not build these
 

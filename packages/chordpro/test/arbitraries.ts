@@ -11,6 +11,16 @@ import type { Chart, Node, Segment } from '../src/index';
  * equality rather than settling for a weaker "stable after one pass" property.
  */
 
+/**
+ * Wider than the chord builder's vocabulary, on purpose.
+ *
+ * These generate the symbols a chart pasted from the web contains — `dim`, `aug`, `6/9`,
+ * `Cb`, `E#` — none of which `buildChord` produces and several of which `parseChord`
+ * refuses. That is the point: the parser holds a chord as opaque text so foreign charts
+ * round-trip unharmed, and narrowing these to what the picker can build would prove
+ * nothing about the input most likely to break it. The vocabulary agreement rule in the
+ * root CLAUDE.md binds the picker and the demo charts, not these.
+ */
 const ROOTS = Array.from('ABCDEFG');
 const ACCIDENTALS = ['', '#', 'b'];
 const QUALITIES = [

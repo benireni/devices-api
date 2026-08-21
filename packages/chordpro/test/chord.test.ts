@@ -136,9 +136,12 @@ describe('parseChord', () => {
 });
 
 describe('isExactlyEditable', () => {
-  it.each(['F7M', 'Dm7/G', 'C7(9,13)', 'C°', 'Am7(b5)'])('holds %s as written', (symbol) => {
-    expect(isExactlyEditable(symbol)).toBe(true);
-  });
+  it.each(['F7M', 'Dm7/G', 'C7(9,13)', 'C°', 'Am7(b5)', 'Gb7(#11)', 'D#°', 'Db°', 'C6(9)'])(
+    'holds %s as written',
+    (symbol) => {
+      expect(isExactlyEditable(symbol)).toBe(true);
+    },
+  );
 
   it.each([
     ['C°7M', 'a diminished chord has no major seventh to keep'],
@@ -150,7 +153,7 @@ describe('isExactlyEditable', () => {
     expect(isExactlyEditable(symbol)).toBe(false);
   });
 
-  it.each(['Gb7(#11)', 'Cdim', 'H', ''])('refuses %s, which it cannot read at all', (symbol) => {
+  it.each(['Cdim', 'Cmaj7', 'H', ''])('refuses %s, which it cannot read at all', (symbol) => {
     expect(parseChord(symbol)).toBeNull();
     expect(isExactlyEditable(symbol)).toBe(false);
   });

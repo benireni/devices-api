@@ -11,7 +11,36 @@
  * vocabulary, not format.
  */
 
-export const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'] as const;
+/**
+ * Every root the builder can spell, ordered by pitch and then by spelling.
+ *
+ * Twelve pitches, fifteen spellings: a passing chord is written sharp going up and flat
+ * coming down, so `C6 C#° Dm7 D#° Em7` ascending and `Em7 Eb° Dm7 Db° C6` descending are
+ * both correct and neither is a respelling of the other. Carrying only one name per pitch
+ * forced the demo charts — and any chart pasted in from elsewhere — out of the vocabulary
+ * the picker can express.
+ *
+ * `matchNote` takes the longest match, so `C#` is never read as `C`.
+ */
+export const NOTES = [
+  'C',
+  'C#',
+  'Db',
+  'D',
+  'D#',
+  'Eb',
+  'E',
+  'F',
+  'F#',
+  'Gb',
+  'G',
+  'G#',
+  'Ab',
+  'A',
+  'A#',
+  'Bb',
+  'B',
+] as const;
 
 /** The third and fifth. An empty quality is the major triad, which cifra leaves bare. */
 export const QUALITIES = ['', 'm', '°', '+'] as const;

@@ -58,7 +58,7 @@ export async function seedDemoLibrary(library: Library): Promise<void> {
     '',
     '{start_of_verse: Tensões sobre o II-V-I}',
     '[Dm7(9)]  [G7(b13)]  [C7M(9)]',
-    '[Dm7(11)]  [G7(#9)]  [C6/9]',
+    '[Dm7(11)]  [G7(#9)]  [C6(9)]',
     '[Cm7(b9)]  [F7(#11)]  [Bb7M(13)]',
     '{end_of_verse}',
     '',
