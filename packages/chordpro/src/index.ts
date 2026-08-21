@@ -52,6 +52,8 @@ export {
   QTDN_PREFIX,
   TAB_SECTION,
   endDirective,
+  isTabEnd,
+  isTabStart,
   sectionEndName,
   sectionStartName,
   startDirective,

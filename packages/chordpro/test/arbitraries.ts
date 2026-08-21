@@ -55,7 +55,11 @@ const QUALITIES = [
 const LYRIC_CHARS = Array.from('abcdefghijklmnopqrstuvwxyzáéíóúãõç ,.!?\'-');
 const NAME_CHARS = Array.from('abcdefghijklmnopqrstuvwxyz_');
 const VALUE_CHARS = Array.from('abcdefghijklmnopqrstuvwxyz0123456789 -:.');
-const TAB_CHARS = Array.from('eBGDAE|-0123456789 hp/\\');
+// `{` included deliberately. It used to be left out, and leaving it out is what let the
+// round-trip property pass over a tab line that could close its own fence — the generator
+// was shaped around the defect. `serialize` now refuses that one case outright
+// (see serialize.test.ts), so the only thing excluding `{` bought was a blind spot.
+const TAB_CHARS = Array.from('eBGDAE|-0123456789 hp/\\{}');
 
 const chord = fc
   .tuple(
@@ -123,6 +127,10 @@ const tabBlock: fc.Arbitrary<Node> = fc
   .map(([label, lines]) => ({ kind: 'tab', label, lines }));
 
 /** `tab` is excluded because the parser gives it dedicated, opaque handling. */
+// A section named `tab` *is* a tab block — the parser gives it dedicated opaque
+// handling, and `serialize` now refuses to write one as an ordinary section rather than
+// emitting text that reads back as something else. Excluded here because it is a
+// different node kind, not because it round-trips badly.
 const sectionName = directiveName.filter((name) => name !== 'tab');
 
 export const node: fc.Arbitrary<Node> = fc.letrec<{ node: Node }>((tie) => ({

@@ -1,5 +1,5 @@
 import type { Chart, Node } from './ast';
-import { TAB_SECTION, endDirective, startDirective } from './directives';
+import { TAB_SECTION, endDirective, isTabEnd, startDirective } from './directives';
 
 /**
  * Render a {@link Chart} back to ChordPro source.
@@ -43,12 +43,24 @@ function writeNode(node: Node, out: string[]): void {
       return;
 
     case 'tab':
+      // A tab line holding its own closing fence would reparse as an empty block plus
+      // stray lines, which is the one way `parse(serialize(ast))` stops equalling `ast`.
+      // Refusing is the module's own rule: never guess, and never emit what cannot be
+      // read back.
+      for (const line of node.lines) {
+        if (isTabEnd(line)) {
+          throw new Error('A tab line cannot contain the directive that closes its block.');
+        }
+      }
       out.push(directiveLine(startDirective(TAB_SECTION), node.label));
       out.push(...node.lines);
       out.push(directiveLine(endDirective(TAB_SECTION), null));
       return;
 
     case 'section':
+      if (node.name === TAB_SECTION) {
+        throw new Error('A section named "tab" is a tab block, and must be one.');
+      }
       out.push(directiveLine(startDirective(node.name), node.label));
       writeNodes(node.children, out);
       out.push(directiveLine(endDirective(node.name), null));

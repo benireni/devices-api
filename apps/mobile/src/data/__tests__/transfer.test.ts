@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { EXTENSION, exportFilename, prepareImport } from '../transfer';
+import { EXTENSION, MAX_IMPORT_BYTES, exportFilename, prepareImport } from '../transfer';
 
 describe('exportFilename', () => {
   it('names the file after the song', () => {
@@ -42,5 +42,23 @@ describe('prepareImport', () => {
   it('leaves everything else exactly as it arrived', () => {
     const source = '{title: Wave}\n\n{start_of_tab}\ne|--0--|\n{end_of_tab}';
     expect(prepareImport(source, 'new')).toContain('{start_of_tab}\ne|--0--|\n{end_of_tab}');
+  });
+});
+
+describe('prepareImport, on foreign files', () => {
+  it('normalises Windows line endings, which would otherwise survive as lyric text', () => {
+    const imported = prepareImport('{title: Wave}\r\n\r\n[C]hello\r\n', 'new');
+
+    expect(imported).not.toContain('\r');
+  });
+
+  it('normalises old Mac line endings too', () => {
+    expect(prepareImport('{title: Wave}\r[C]hello', 'new')).not.toContain('\r');
+  });
+
+  it('refuses a file far too large to be a song', () => {
+    const huge = `{title: Big}\n${'x'.repeat(MAX_IMPORT_BYTES)}`;
+
+    expect(() => prepareImport(huge, 'new')).toThrow('too large');
   });
 });

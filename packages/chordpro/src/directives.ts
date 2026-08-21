@@ -48,3 +48,31 @@ export function startDirective(section: string): string {
 export function endDirective(section: string): string {
   return `${END_PREFIX}${section}`;
 }
+
+/**
+ * The name of the directive a line holds, lowercased, or `null` if it is not one.
+ *
+ * Trims and lowercases, so `  {START_OF_TAB}` is the same fence as `{start_of_tab}`.
+ * Shared rather than reimplemented per caller: the screens were testing for fences with
+ * `startsWith('{start_of_tab')`, which disagreed with this on both counts.
+ */
+export function directiveName(line: string): string | null {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) return null;
+
+  const body = trimmed.slice(1, -1);
+  const colon = body.indexOf(':');
+  return (colon === -1 ? body : body.slice(0, colon)).trim().toLowerCase();
+}
+
+/** Whether a line opens a tab block. */
+export function isTabStart(line: string): boolean {
+  const name = directiveName(line);
+  return name !== null && sectionStartName(name) === TAB_SECTION;
+}
+
+/** Whether a line closes a tab block. */
+export function isTabEnd(line: string): boolean {
+  const name = directiveName(line);
+  return name !== null && sectionEndName(name) === TAB_SECTION;
+}

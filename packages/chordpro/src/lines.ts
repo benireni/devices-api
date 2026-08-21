@@ -1,5 +1,6 @@
 import {
   TAB_SECTION,
+  directiveName,
   endDirective,
   sectionEndName,
   sectionStartName,
@@ -150,13 +151,4 @@ function matchBackward(lines: readonly string[], from: number, section: string):
   }
 
   return from;
-}
-
-function directiveName(line: string): string | null {
-  const trimmed = line.trim();
-  if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) return null;
-
-  const body = trimmed.slice(1, -1);
-  const colon = body.indexOf(':');
-  return (colon === -1 ? body : body.slice(0, colon)).trim().toLowerCase();
 }
