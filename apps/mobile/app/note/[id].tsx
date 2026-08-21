@@ -31,6 +31,7 @@ export default function NoteScreen() {
   const { id, folder } = useLocalSearchParams<{ id: string; folder?: string }>();
   const [note, setNote] = useState<Note | null>(null);
   const [failed, setFailed] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [moving, setMoving] = useState(false);
   const [renaming, setRenaming] = useState(false);
@@ -125,8 +126,18 @@ export default function NoteScreen() {
    */
   async function rename(title: string) {
     if (note === null) return;
-    const updated = serialize(setDirective(parse(note.source).chart, 'title', title.trim()));
-    await library.saveNote(id, from, updated);
+    // Built from the text last written, not the copy in state: a pending speed change
+    // has already updated one and not the other, and renaming from the stale one erased
+    // the speed the user had just set.
+    const current = source.current ?? note.source;
+    const updated = serialize(setDirective(parse(current).chart, 'title', title.trim()));
+    try {
+      await library.saveNote(id, from, updated);
+    } catch (cause) {
+      log.error('note.save.rejected', cause, { id });
+      setProblem('Could not rename this note.');
+      return;
+    }
     source.current = updated;
     setNote({ ...note, title: title.trim(), source: updated });
     log.info('note.renamed', { id });
@@ -147,8 +158,14 @@ export default function NoteScreen() {
   async function move(destination: string) {
     unsaved.current = null;
     const to = destination === '' ? null : destination;
-    await library.moveNote(id, from, to);
-    log.info('note.moved', { id, to });
+    try {
+      await library.moveNote(id, from, to);
+    } catch (cause) {
+      log.error('note.move.rejected', cause, { id });
+      setProblem('Could not move this note.');
+      return;
+    }
+    log.info('note.moved', { id });
     setMoving(false);
     router.back();
   }
@@ -210,6 +227,12 @@ export default function NoteScreen() {
             />
           </View>
 
+          {problem !== null && (
+            <Text variant="caption" tone="danger" style={{ marginTop: space.md }}>
+              {problem}
+            </Text>
+          )}
+
           <View style={styles.actions}>
             <Button
               label="Rename"
@@ -229,7 +252,9 @@ export default function NoteScreen() {
             <Button
               label="Share"
               onPress={() => {
-                void shareNote(note.title, note.source);
+                void shareNote(note.title, source.current ?? note.source).then((shared) => {
+                  if (!shared) setProblem('Sharing is not available on this device.');
+                });
               }}
               style={{ flex: 1 }}
             />

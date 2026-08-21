@@ -15,6 +15,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { library } from '@/data';
+import { log } from '@/observability';
 import { begin, canUndo, commit, undo, type History } from '@/editing/history';
 import { Button, ChordPicker, OptionSheet, Screen, Text, TextField } from '@/ui/components';
 import { color, space } from '@/ui/tokens';
@@ -38,6 +39,7 @@ export default function ComposeScreen() {
   const [target, setTarget] = useState<{ line: number; offset: number; label: string } | null>(null);
   const [menu, setMenu] = useState<number | null>(null);
   const [sectioning, setSectioning] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
 
   /**
    * Re-read on every focus, not once on mount.
@@ -49,9 +51,15 @@ export default function ComposeScreen() {
    */
   useFocusEffect(
     useCallback(() => {
-      void library.readNote(id, folder ?? null).then((note) => {
-        setHistory(begin(note.source.split('\n')));
-      });
+      void library.readNote(id, folder ?? null).then(
+        (note) => {
+          setHistory(begin(note.source.split('\n')));
+        },
+        (cause: unknown) => {
+          log.error('note.read.failed', cause, { id });
+          setProblem('Could not open this note.');
+        },
+      );
     }, [id, folder]),
   );
 
@@ -88,8 +96,14 @@ export default function ComposeScreen() {
 
   async function save() {
     if (lines === null) return;
-    await library.saveNote(id, folder ?? null, lines.join('\n'));
-    router.back();
+    try {
+      await library.saveNote(id, folder ?? null, lines.join('\n'));
+      router.back();
+    } catch (cause) {
+      // Never navigate away from work that was not written. The buffer is still here.
+      log.error('note.save.rejected', cause, { id });
+      setProblem('Could not save. Your edits are still here — try again.');
+    }
   }
 
   /**
@@ -167,6 +181,12 @@ export default function ComposeScreen() {
           />
         </View>
       </ScrollView>
+
+      {problem !== null && (
+        <Text variant="caption" tone="danger">
+          {problem}
+        </Text>
+      )}
 
       <View style={styles.footer}>
         <Button

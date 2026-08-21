@@ -41,6 +41,7 @@ export default function TabScreen() {
   /** The opening fence's label, carried through so editing a grid does not erase it. */
   const [label, setLabel] = useState<string | null>(null);
   const [unreadable, setUnreadable] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
 
   const start = line === undefined ? -1 : Number.parseInt(line, 10);
 
@@ -88,7 +89,13 @@ export default function TabScreen() {
       next = [...lines.slice(0, start), ...block, ...lines.slice(end + 1)];
     }
 
-    await library.saveNote(id, folder ?? null, next.join('\n'));
+    try {
+      await library.saveNote(id, folder ?? null, next.join('\n'));
+    } catch (cause) {
+      log.error('note.save.rejected', cause, { id });
+      setProblem('Could not save this tab. It is still here — try again.');
+      return;
+    }
     log.info('tab.saved', { id, columns: grid.columns });
     router.back();
   }
@@ -179,6 +186,12 @@ export default function TabScreen() {
             />
           </View>
         </ScrollView>
+      )}
+
+      {problem !== null && (
+        <Text variant="caption" tone="danger">
+          {problem}
+        </Text>
       )}
 
       <View style={styles.footer}>

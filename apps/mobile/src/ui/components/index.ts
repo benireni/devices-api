@@ -5,6 +5,7 @@ export { ChordPicker } from './ChordPicker';
 export { ChordStrip } from './ChordStrip';
 export { ConfirmSheet } from './ConfirmSheet';
 export { EmptyState } from './EmptyState';
+export { ErrorBoundary } from './ErrorBoundary';
 export { ListRow } from './ListRow';
 export { OptionSheet } from './OptionSheet';
 export type { Option } from './OptionSheet';

@@ -32,11 +32,32 @@ export class ExpoFileStore implements FileStore {
     return new File(path).text();
   }
 
-  write(path: string, contents: string): Promise<void> {
-    const file = new File(path);
-    if (!file.exists) file.create({ intermediates: true });
-    file.write(contents);
-    return Promise.resolve();
+  /**
+   * Writes through a temporary file, then renames it into place.
+   *
+   * `write` truncates before it fills, so a crash, an OS kill or a full disk in the
+   * middle of one left the note empty or half-written — and the file *is* the model, so
+   * there is no second copy to rebuild it from. Rename is atomic on APFS: the note is
+   * either the old text or the new one, never a prefix of either.
+   */
+  async write(path: string, contents: string): Promise<void> {
+    const temporary = new File(`${path}.writing`);
+    if (temporary.exists) temporary.delete();
+    temporary.create({ intermediates: true });
+    temporary.write(contents);
+
+    const target = new File(path);
+    try {
+      // Renaming onto the target is the atomic step: the note is either the old text or
+      // the new one, never a prefix of either.
+      await temporary.move(target);
+    } catch {
+      // Not every platform lets a rename overwrite. Falling back leaves a gap where the
+      // note is briefly absent, which a read reports rather than silently mistaking for
+      // an empty note — the failure the truncating write used to produce.
+      if (target.exists) target.delete();
+      await temporary.move(target);
+    }
   }
 
   remove(path: string): Promise<void> {

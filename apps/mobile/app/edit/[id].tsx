@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
 import { parse } from '@qtdn/chordpro';
 import { library } from '@/data';
+import { log } from '@/observability';
 import { Button, Screen, Text, TextField } from '@/ui/components';
 import { space } from '@/ui/tokens';
 
@@ -17,11 +18,18 @@ import { space } from '@/ui/tokens';
 export default function EditScreen() {
   const { id, folder } = useLocalSearchParams<{ id: string; folder?: string }>();
   const [source, setSource] = useState<string | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
 
   useEffect(() => {
-    void library.readNote(id, folder ?? null).then((note) => {
-      setSource(note.source);
-    });
+    void library.readNote(id, folder ?? null).then(
+      (note) => {
+        setSource(note.source);
+      },
+      (cause: unknown) => {
+        log.error('note.read.failed', cause, { id });
+        setProblem('Could not open this note.');
+      },
+    );
   }, [id, folder]);
 
   // Diagnostics are advisory while typing: a half-written chart is not an error state.
@@ -32,8 +40,13 @@ export default function EditScreen() {
 
   async function save() {
     if (source === null) return;
-    await library.saveNote(id, folder ?? null, source);
-    router.back();
+    try {
+      await library.saveNote(id, folder ?? null, source);
+      router.back();
+    } catch (cause) {
+      log.error('note.save.rejected', cause, { id });
+      setProblem('Could not save. Your text is still here — try again.');
+    }
   }
 
   return (
@@ -48,10 +61,11 @@ export default function EditScreen() {
         )}
 
         <View style={styles.footer}>
-          <Text variant="caption" tone={diagnostics.length > 0 ? 'danger' : 'textMuted'}>
-            {diagnostics.length === 0
+          <Text variant="caption" tone={problem !== null || diagnostics.length > 0 ? 'danger' : 'textMuted'}>
+            {problem ??
+              (diagnostics.length === 0
               ? 'Parses cleanly'
-              : `${String(diagnostics.length)} issue${diagnostics.length === 1 ? '' : 's'}: ${diagnostics[0]?.message ?? ''}`}
+                : `${String(diagnostics.length)} issue${diagnostics.length === 1 ? '' : 's'}: ${diagnostics[0]?.message ?? ''}`)}
           </Text>
           <Button
             label="Save"

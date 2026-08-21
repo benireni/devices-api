@@ -21,6 +21,7 @@ export default function LibraryScreen() {
   const { snapshot, notes, order, setOrder, loading, reload } = useLibrary();
   const [ordering, setOrdering] = useState(false);
   const [query, setQuery] = useState('');
+  const [problem, setProblem] = useState<string | null>(null);
   const [results, setResults] = useState<NoteSummary[]>([]);
   const searching = query.trim() !== '';
 
@@ -40,7 +41,10 @@ export default function LibraryScreen() {
       await reload();
       if (id !== null) router.push(`/note/${id}`);
     } catch (cause) {
+      // share.ts throws precisely so the caller can say so. It used to say nothing, and
+      // the only record was a log screen with no way into it.
       log.error('note.import.failed', cause);
+      setProblem('Could not read that file. It may not be a chord chart.');
     }
   }
 
@@ -129,6 +133,12 @@ export default function LibraryScreen() {
           setOrdering(false);
         }}
       />
+
+      {problem !== null && (
+        <Text variant="caption" tone="danger">
+          {problem}
+        </Text>
+      )}
 
       <View style={styles.actions}>
         <Button
