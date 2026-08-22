@@ -2,6 +2,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ScrollView } from 'react-native';
 
+import { log } from '@/observability';
 import { advance, hasReachedEnd, shouldResync } from './scroll';
 
 /**
@@ -27,7 +28,13 @@ export function useAutoScroll(speed: number) {
 
     // Only while playing. A chart that holds the display on after you have stopped is a
     // flat battery, and `useKeepAwake` has no way to be conditionally inactive.
-    void activateKeepAwakeAsync(KEEP_AWAKE_TAG);
+    //
+    // Best-effort: a platform may refuse. Playing with the screen free to dim is worse
+    // than playing with it held on, and far better than an unhandled rejection — which
+    // is what a bare `void` produced everywhere the permission was denied.
+    void activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch((cause: unknown) => {
+      log.warn('player.keepAwake.refused', { reason: String(cause) });
+    });
 
     let frame = 0;
     let previous = Date.now();
@@ -52,7 +59,8 @@ export function useAutoScroll(speed: number) {
     frame = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(frame);
-      void deactivateKeepAwake(KEEP_AWAKE_TAG);
+      // Nothing to release when activation was refused, and saying so is not news.
+      void deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => undefined);
     };
   }, [running, speed, bounds]);
 
