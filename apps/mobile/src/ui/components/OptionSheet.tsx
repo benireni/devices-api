@@ -8,6 +8,8 @@ export interface Option {
   readonly key: string;
   readonly label: string;
   readonly subtitle?: string | undefined;
+  /** `danger` for a destructive choice. A confirm still follows; this is about aim. */
+  readonly tone?: 'text' | 'danger';
 }
 
 export interface OptionSheetProps {
@@ -42,6 +44,7 @@ export function OptionSheet({
             key={option.key}
             title={option.label}
             subtitle={option.subtitle}
+            tone={option.tone ?? 'text'}
             onPress={() => {
               onSelect(option.key);
             }}

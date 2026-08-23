@@ -145,6 +145,34 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
           ))}
         </Row>
 
+        {/*
+          Bass sits high because a slash chord is ordinary in this repertoire — `Dm7/C`
+          and `Dm/C#` are both in the demo library — while suspensions and tensions are
+          refinements. Row order here is presentation only; `buildChord` assembles the
+          symbol in the written order regardless.
+        */}
+        <Row label="Bass">
+          <Chip
+            label="—"
+            selected={spec.bass === null}
+            disabled={locked}
+            onPress={() => {
+              patch({ bass: null });
+            }}
+          />
+          {NOTES.map((note) => (
+            <Chip
+              key={note}
+              label={note}
+              selected={note === spec.bass}
+              disabled={locked}
+              onPress={() => {
+                patch({ bass: note });
+              }}
+            />
+          ))}
+        </Row>
+
         <Row label="Seventh">
           {SEVENTHS.map((seventh) => (
             <Chip
@@ -187,27 +215,6 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
           ))}
         </Row>
 
-        <Row label="Bass">
-          <Chip
-            label="—"
-            selected={spec.bass === null}
-            disabled={locked}
-            onPress={() => {
-              patch({ bass: null });
-            }}
-          />
-          {NOTES.map((note) => (
-            <Chip
-              key={note}
-              label={note}
-              selected={note === spec.bass}
-              disabled={locked}
-              onPress={() => {
-                patch({ bass: note });
-              }}
-            />
-          ))}
-        </Row>
       </ScrollView>
     </Sheet>
   );

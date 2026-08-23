@@ -9,12 +9,14 @@ export interface ListRowProps {
   subtitle?: string | undefined;
   /** Short right-aligned metadata: a note count, a duration. */
   meta?: string | undefined;
+  /** `danger` marks a destructive choice, so a thumb can aim away from it. */
+  tone?: 'text' | 'danger';
   onPress: () => void;
   onLongPress?: (() => void) | undefined;
 }
 
 /** The one row primitive. Folders, notes and settings all use it, so they all match. */
-export function ListRow({ title, subtitle, meta, onPress, onLongPress }: ListRowProps) {
+export function ListRow({ title, subtitle, meta, tone = 'text', onPress, onLongPress }: ListRowProps) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -23,7 +25,7 @@ export function ListRow({ title, subtitle, meta, onPress, onLongPress }: ListRow
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
       <View style={styles.text}>
-        <Text variant="body" numberOfLines={1}>
+        <Text variant="body" tone={tone} numberOfLines={1}>
           {title}
         </Text>
         {subtitle !== undefined && subtitle !== '' && (

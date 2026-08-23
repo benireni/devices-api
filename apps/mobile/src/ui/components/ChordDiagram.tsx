@@ -1,7 +1,7 @@
 import { DIAGRAM_STRINGS, fingering, parseChord } from '@qtdn/chordpro';
 import { StyleSheet, View } from 'react-native';
 
-import { color, space } from '../tokens';
+import { color } from '../tokens';
 import { Text } from './Text';
 
 const FRETS = 4;
@@ -15,32 +15,16 @@ export interface ChordDiagramProps {
 /**
  * A fingering box for one chord.
  *
- * Names the chord and says "no shape" when there is no honest diagram — a tension or a
- * slash bass changes which notes are played, and a plain shape underneath such a symbol
- * teaches the wrong chord.
- *
- * It used to render nothing at all, which made the strip an arbitrary subset of the song:
- * a chart with eighteen chords showed three, and nothing distinguished "not in this song"
- * from "we have no shape for it". Silence is not the same as an honest refusal.
+ * Renders nothing when no honest shape exists — a tension or a slash bass changes which
+ * notes are played, and a plain shape underneath such a symbol teaches the wrong chord.
+ * The strip names those chords in a line of its own, so the omission is still accounted
+ * for without a rail of empty boxes standing between the reader and the first lyric.
  */
 export function ChordDiagram({ symbol }: ChordDiagramProps) {
   const spec = parseChord(symbol);
   const shape = spec === null ? null : fingering(spec);
 
-  if (shape === null) {
-    return (
-      <View style={styles.wrap}>
-        <Text variant="chord" tone="chord">
-          {symbol}
-        </Text>
-        <View style={styles.absent}>
-          <Text variant="caption" tone="textMuted">
-            no shape
-          </Text>
-        </View>
-      </View>
-    );
-  }
+  if (shape === null) return null;
 
   const top = shape.baseFret === 0 ? 1 : shape.baseFret;
 
@@ -78,12 +62,6 @@ export function ChordDiagram({ symbol }: ChordDiagramProps) {
 }
 
 const styles = StyleSheet.create({
-  absent: {
-    height: CELL_HEIGHT * 5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: space.sm,
-  },
   wrap: { alignItems: 'center', gap: 2 },
   board: { flexDirection: 'row' },
   string: { alignItems: 'center' },

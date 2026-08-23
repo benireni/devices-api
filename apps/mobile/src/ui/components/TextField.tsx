@@ -3,6 +3,8 @@ import { StyleSheet, TextInput } from 'react-native';
 import { color, radius, space, typography } from '../tokens';
 
 export interface TextFieldProps {
+  /** A search field: iOS draws its own clear button while there is text in it. */
+  search?: boolean;
   value: string;
   onChangeText: (value: string) => void;
   placeholder?: string;
@@ -17,6 +19,7 @@ export function TextField({
   placeholder,
   autoFocus = false,
   source = false,
+  search = false,
 }: TextFieldProps) {
   return (
     <TextInput
@@ -29,6 +32,10 @@ export function TextField({
       autoCapitalize={source ? 'none' : 'sentences'}
       autoCorrect={!source}
       spellCheck={!source}
+      // iOS draws the clear button itself. Without it, abandoning a search means
+      // backspacing a word one character at a time, one-handed.
+      clearButtonMode={search ? 'while-editing' : 'never'}
+      returnKeyType={search ? 'search' : 'default'}
       style={[styles.base, source ? styles.source : styles.single]}
     />
   );

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { color, radius, space, type TypeVariant } from '../tokens';
 import { Text } from './Text';
@@ -35,7 +35,16 @@ export function Sheet({
 }: SheetProps) {
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onDismiss}>
-      <View style={styles.container}>
+      {/*
+        The avoiding view *is* the container rather than a wrapper inside it. Three of
+        these sheets auto-focus a field, so without keyboard avoidance the keyboard covers
+        the panel's own actions — but adding it as an extra layer between the flex
+        container and the panel pushed the panel off the bottom of the screen entirely.
+      */}
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Dismiss"
@@ -54,7 +63,7 @@ export function Sheet({
           {children}
           <View style={styles.actions}>{actions}</View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

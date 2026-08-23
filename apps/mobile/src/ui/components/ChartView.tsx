@@ -32,12 +32,28 @@ function renderNode(node: Node, index: number) {
   }
 }
 
+/** Section kinds the editor can add, named for reading. Anything else shows as written. */
+const SECTION_NAMES: Readonly<Record<string, string>> = {
+  verse: 'Verse',
+  chorus: 'Chorus',
+  bridge: 'Bridge',
+};
+
 function SectionBlock({ section }: { section: Section }) {
+  // A section added from the editor carries no label, and rendering only labels meant
+  // marking the chorus and then finding nothing on the chart that said so. The fallback
+  // is app chrome rather than the user's words, so it is titled here rather than written
+  // into the file.
+  const heading =
+    section.label === null || section.label === ''
+      ? (SECTION_NAMES[section.name] ?? section.name)
+      : section.label;
+
   return (
     <View style={styles.section}>
-      {section.label !== null && section.label !== '' && (
+      {heading !== '' && (
         <Text variant="caption" tone="textMuted" style={{ marginBottom: space.xs }}>
-          {section.label}
+          {heading}
         </Text>
       )}
       {section.children.map(renderNode)}
