@@ -31,6 +31,9 @@ export default defineConfig({
         // tested directly. Included in the globs deliberately, so this exclusion is a
         // recorded decision rather than a file nobody noticed was never measured.
         'apps/mobile/src/hooks/useLibrary.ts',
+        // Platform binding: the navigation `beforeRemove` event. One branch, and the
+        // thing it guards — whether the buffer is dirty — is decided by the caller.
+        'apps/mobile/src/hooks/useDiscardGuard.ts',
       ],
       // 100% across the board. Every gap so far has been an unreachable branch worth
       // deleting rather than a test worth writing, so the bar stays here.

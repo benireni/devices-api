@@ -36,6 +36,14 @@ export function useAutoScroll(speed: number) {
       log.warn('player.keepAwake.refused', { reason: String(cause) });
     });
 
+    // Starting from the end means starting again. Without this, pressing Play on a
+    // finished song stopped on the first frame and left you to scroll back by hand —
+    // the gesture auto-scroll exists to replace.
+    if (hasReachedEnd(offset.current, bounds.content, bounds.viewport)) {
+      offset.current = 0;
+      scroller.current?.scrollTo({ y: 0, animated: false });
+    }
+
     let frame = 0;
     let previous = Date.now();
 

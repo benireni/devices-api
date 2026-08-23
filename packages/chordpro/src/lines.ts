@@ -152,3 +152,28 @@ function matchBackward(lines: readonly string[], from: number, section: string):
 
   return from;
 }
+
+/**
+ * Where a new line should go.
+ *
+ * The end of the last open block, not the end of the file. Appending blindly put the
+ * line after `{end_of_verse}` — outside the section the note was created with — and
+ * `moveLine` refuses to cross a fence, so it could never be moved back in.
+ */
+export function appendPoint(lines: readonly string[]): number {
+  // Walked as values rather than indices: an indexed read here needs a fallback that
+  // cannot run, and an unreachable branch is one this package deletes rather than tests.
+  let index = lines.length;
+  for (const line of [...lines].reverse()) {
+    if (line.trim() !== '') break;
+    index -= 1;
+  }
+
+  const previous = lines[index - 1];
+  if (previous === undefined) return lines.length;
+
+  const name = directiveName(previous);
+  const closes = name === null ? null : sectionEndName(name);
+
+  return closes === null ? lines.length : index - 1;
+}

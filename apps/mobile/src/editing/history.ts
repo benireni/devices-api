@@ -47,6 +47,18 @@ export function undo<T>(history: History<T>): History<T> {
   return { past: history.past.slice(0, -1), present: previous };
 }
 
+/**
+ * Amends the newest step instead of adding one.
+ *
+ * For an edit the user experiences as a single act carried out over several touches. The
+ * chord builder is the case: assembling `Dm7(9)` writes on every chip, so undo afterwards
+ * walked back through `Dm7`, `Dm`, `D` rather than removing the chord. The first touch
+ * commits and the rest amend.
+ */
+export function amend<T>(history: History<T>, present: T): History<T> {
+  return { past: history.past, present };
+}
+
 /** Replaces the document without recording a step — for loading, not editing. */
 export function reset<T>(present: T): History<T> {
   return begin(present);

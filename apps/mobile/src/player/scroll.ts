@@ -6,7 +6,12 @@
  * exactly the thing that drifts between the stored value and what the screen does.
  */
 
-export const MIN_SPEED = 0;
+/**
+ * Five, not zero. At zero the loop ran at sixty frames a second, scrolled nothing, and
+ * held the display awake until someone noticed the chart was not moving and pressed Stop.
+ * "Playing" has to mean the page moves.
+ */
+export const MIN_SPEED = 5;
 export const MAX_SPEED = 120;
 export const SPEED_STEP = 5;
 

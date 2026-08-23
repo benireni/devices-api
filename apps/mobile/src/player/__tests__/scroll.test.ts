@@ -74,8 +74,10 @@ describe('advance', () => {
     expect(advance(30, -100)).toBe(0);
   });
 
-  it('does not move when stopped', () => {
-    expect(advance(0, 1000)).toBe(0);
+  it('lifts a speed below the floor rather than standing still', () => {
+    // Stopping is `running === false`, not a speed of zero. A zero speed used to run the
+    // frame loop and the keep-awake lock while the chart sat motionless.
+    expect(advance(0, 1000)).toBe(MIN_SPEED);
   });
 });
 

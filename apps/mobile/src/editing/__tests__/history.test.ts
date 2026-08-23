@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEPTH, begin, canUndo, commit, reset, undo } from '../history';
+import { DEPTH, amend, begin, canUndo, commit, reset, undo } from '../history';
 
 const sameLines = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && a.every((line, index) => line === b[index]);
@@ -61,5 +61,21 @@ describe('history', () => {
     expect(canUndo(edited)).toBe(true);
     expect(loaded.present).toBe('fresh');
     expect(canUndo(loaded)).toBe(false);
+  });
+});
+
+describe('amend', () => {
+  it('changes the present without deepening the past', () => {
+    const built = amend(amend(commit(begin('D'), 'Dm'), 'Dm7'), 'Dm7(9)');
+
+    expect(built.present).toBe('Dm7(9)');
+    expect(built.past).toEqual(['D']);
+  });
+
+  it('leaves one undo for the whole act', () => {
+    const built = amend(commit(begin('D'), 'Dm'), 'Dm7');
+
+    expect(undo(built).present).toBe('D');
+    expect(canUndo(undo(built))).toBe(false);
   });
 });

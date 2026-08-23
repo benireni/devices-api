@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { appendSection, isFence, moveLine, removeLine, tabOwners } from '../src/index';
+import {
+  appendPoint,
+  appendSection,
+  isFence,
+  moveLine,
+  removeLine,
+  tabOwners,
+} from '../src/index';
 
 const VERSE = [
   '{title: Wave}',
@@ -167,5 +174,31 @@ describe('tabOwners', () => {
 
   it('treats an unclosed block as running to the end, so its content is never offered as lyrics', () => {
     expect(tabOwners(['{start_of_tab}', 'e|--5--|'])).toEqual([null, 0]);
+  });
+});
+
+describe('appendPoint', () => {
+  it('puts a new line inside the section a note ends with', () => {
+    // The template every new note starts from. Appending past the fence left the first
+    // line a user ever writes stranded outside the verse they were given.
+    const lines = ['{title: Sabiá}', '', '{start_of_verse}', '', '{end_of_verse}'];
+
+    expect(appendPoint(lines)).toBe(4);
+  });
+
+  it('ignores blank lines after the fence', () => {
+    expect(appendPoint(['{start_of_verse}', 'a', '{end_of_verse}', '', ''])).toBe(2);
+  });
+
+  it('appends at the end when the note does not end in a block', () => {
+    expect(appendPoint(['{title: Wave}', '[C]uma linha'])).toBe(2);
+  });
+
+  it('appends at the end of an empty note', () => {
+    expect(appendPoint([])).toBe(0);
+  });
+
+  it('appends at the end when the last block is still open', () => {
+    expect(appendPoint(['{start_of_verse}', 'a'])).toBe(2);
   });
 });
