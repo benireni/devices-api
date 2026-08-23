@@ -62,10 +62,12 @@ test.describe('a note', () => {
 
   test('cannot be moved when there is nowhere to move it', async ({ app }) => {
     // Emptying the library of folders is the only way to reach this state.
-    await app.tap('Delete');
+    await app.tap('Actions');
+    await app.tapInSheet('Delete', { closes: false });
     await app.tapInSheet('Delete');
     await app.tapRow('Estudos');
-    await app.tap('Delete');
+    await app.tap('Actions');
+    await app.tapInSheet('Delete', { closes: false });
     await app.tapInSheet('Delete');
 
     await app.tapRow('Ideia de sábado');
@@ -157,6 +159,17 @@ test.describe('auto-scroll', () => {
     await expect(app.button('Play')).toBeVisible({ timeout: 20_000 });
   });
 
+  test('plays again from the top once the chart has ended', async ({ app }) => {
+    for (let step = 0; step < 19; step += 1) await app.tap('Faster');
+    await app.tap('Play');
+    await expect(app.button('Play')).toBeVisible({ timeout: 20_000 });
+
+    // Pressing Play at the end used to flicker Stop and do nothing, leaving you to
+    // scroll back by hand — the gesture auto-scroll exists to replace.
+    await app.tap('Play');
+    await expect(app.button('Stop')).toBeVisible();
+  });
+
   test('stops when an editor opens over the chart', async ({ app }) => {
     await app.tap('Play');
     await expect(app.button('Stop')).toBeVisible();
@@ -193,10 +206,11 @@ test.describe('auto-scroll', () => {
   });
 
   test('speed stops at its limits', async ({ app }) => {
-    // 25 down in steps of 5.
-    for (let step = 0; step < 5; step += 1) await app.tap('Slower');
+    // 25 down to the floor in steps of 5. The floor is 5, not 0: a zero speed ran the
+    // frame loop and held the screen awake while the chart sat perfectly still.
+    for (let step = 0; step < 4; step += 1) await app.tap('Slower');
 
-    await expect(app.text('0')).toBeVisible();
+    await expect(app.text('5')).toBeVisible();
     await expect(app.button('Slower')).toBeDisabled();
   });
 });

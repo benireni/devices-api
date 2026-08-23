@@ -16,7 +16,9 @@ test.describe('the raw editor', () => {
   test('reports what it cannot parse, without getting in the way', async ({ app }) => {
     await app.field('{title: …}').fill('[Dm\nA insensatez');
 
-    await expect(app.text('1 issue: Chord bracket is never closed.')).toBeVisible();
+    // Says where, not just what — hunting one unclosed bracket by eye in a pasted
+    // chart is the reason the parser reports a line at all.
+    await expect(app.text('1 issue — line 1: Chord bracket is never closed.')).toBeVisible();
     // Still saveable: a half-written chart is not an error state.
     await expect(app.button('Save')).toBeEnabled();
   });

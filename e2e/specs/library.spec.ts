@@ -129,7 +129,8 @@ test.describe('library', () => {
 
     for (const folder of ['Repertório', 'Estudos']) {
       await app.tapRow(folder);
-      await app.tap('Delete');
+      await app.tap('Actions');
+      await app.tapInSheet('Delete', { closes: false });
       await app.tapInSheet('Delete');
     }
     await app.tapRow('Ideia de sábado');

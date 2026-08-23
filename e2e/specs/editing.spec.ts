@@ -28,9 +28,9 @@ test.describe('the chord builder', () => {
     await app.tapInSheet('Done');
     await app.tap('Save');
 
-    // Twice: over the word, and in the strip — which now lists every chord in the song
-    // rather than only the ones it has a diagram for.
-    await expect(app.text('Am7(9)')).toHaveCount(2);
+    // Over the word it was placed on. Chords with no diagram are named in one line at
+    // the top of the chart rather than given a box each.
+    await expect(app.text('Am7(9)')).toBeVisible();
   });
 
   test('puts the bass note last, after a slash', async ({ app }) => {
@@ -88,7 +88,7 @@ test.describe('the chord builder', () => {
     await app.tapInSheet('Keep it');
     await app.tap('Save');
 
-    await expect(app.text('C°7M')).toHaveCount(2);
+    await expect(app.text('C°7M')).toBeVisible();
   });
 
   test('takes a rewritable chord over only on an explicit press', async ({ app }) => {
@@ -109,7 +109,7 @@ test.describe('the chord builder', () => {
     await app.tapInSheet('Done');
     await app.tap('Save');
 
-    await expect(app.text('C7(9,13)')).toHaveCount(2);
+    await expect(app.text('C7(9,13)')).toBeVisible();
   });
 
   test('removes a chord', async ({ app }) => {
@@ -148,13 +148,25 @@ test.describe('the structured editor', () => {
     await app.tapInSheet('Done');
     await expect(app.text('Ebm')).toBeVisible();
 
+    // Building the chord is one step now, so one Undo takes the whole thing off.
     await app.tap('Undo');
     await expect(app.text('Ebm')).toHaveCount(0);
-    await expect(app.text('Eb')).toBeVisible();
-
-    await app.tap('Undo');
-    await expect(app.text('Eb')).toHaveCount(0);
     await expect(app.button('Undo')).toBeDisabled();
+  });
+
+  test('adds a line inside the section, not after it', async ({ app }) => {
+    await app.tap('Add line');
+    await app.field('Lyrics').fill('dentro do verso');
+    await app.tap('Done');
+    await app.tap('Save');
+
+    await expect(app.text('dentro do verso')).toBeVisible();
+
+    // Checked in the source, because that is where the distinction lives: appending at
+    // the end of the file put the line *after* `{end_of_verse}`, outside the section the
+    // note was created with — and `moveLine` will not carry it back across a fence.
+    await app.noteAction('Source');
+    await expect(app.field('{title: …}')).toHaveValue(/dentro do verso\n\{end_of_verse\}/);
   });
 
   test('adds a line and takes its text', async ({ app }) => {
@@ -188,6 +200,34 @@ test.describe('the structured editor', () => {
     await app.tap('Close');
 
     await expect(app.button('Actions')).toBeVisible();
+  });
+
+  test('does not ask again once the work is saved', async ({ app }) => {
+    await app.tapText('coisa');
+    await app.tapChip('Eb');
+    await app.tapInSheet('Done');
+    await app.tap('Save');
+
+    // Saving makes the buffer the file, so leaving discards nothing. The guard used to
+    // fire on the way out of a successful save.
+    await expect(app.button('Actions')).toBeVisible();
+    await expect(app.text('Discard changes?')).toHaveCount(0);
+  });
+
+  test('undoes a whole chord, not one chip at a time', async ({ app }) => {
+    await app.tapText('coisa');
+    await app.tapChip('Eb');
+    await app.tapChip('m');
+    await app.tapChip('7');
+    await app.tapInSheet('Done');
+    await expect(app.text('Ebm7')).toBeVisible();
+
+    await app.tap('Undo');
+
+    // One act, one step. It used to walk back Ebm, then Eb, then nothing.
+    await expect(app.text('Ebm7')).toHaveCount(0);
+    await expect(app.text('Ebm')).toHaveCount(0);
+    await expect(app.button('Undo')).toBeDisabled();
   });
 
   test('inserts a line where the song needs one', async ({ app }) => {
@@ -292,8 +332,8 @@ test.describe('the line menu', () => {
     // The chart breaks the line at each chord, so the new word stands on its own — and
     // both chords that were on the line are still on it.
     await expect(app.text('rara')).toBeVisible();
-    await expect(app.text('F7M')).toHaveCount(2);
-    await expect(app.text('G7(9)')).toHaveCount(2);
+    await expect(app.text('F7M').first()).toBeVisible();
+    await expect(app.text('G7(9)')).toBeVisible();
   });
 });
 

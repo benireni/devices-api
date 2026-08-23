@@ -38,7 +38,8 @@ test.describe('folders', () => {
 
   test('are renamed in place', async ({ app }) => {
     await app.tapRow('Estudos');
-    await app.tap('Rename');
+    await app.tap('Actions');
+    await app.tapInSheet('Rename', { closes: false });
     await app.field('Folder name').fill('Estudos de harmonia');
     await app.tapInSheet('Rename');
 
@@ -50,7 +51,8 @@ test.describe('folders', () => {
 
   test('refuse a rename onto an existing folder', async ({ app }) => {
     await app.tapRow('Estudos');
-    await app.tap('Rename');
+    await app.tap('Actions');
+    await app.tapInSheet('Rename', { closes: false });
     await app.field('Folder name').fill('Repertório');
     await app.tapInSheet('Rename', { closes: false });
 
@@ -60,7 +62,8 @@ test.describe('folders', () => {
 
   test('say how much a delete would take with it', async ({ app }) => {
     await app.tapRow('Repertório');
-    await app.tap('Delete');
+    await app.tap('Actions');
+    await app.tapInSheet('Delete', { closes: false });
 
     await expect(app.sheet()).toContainText('the 3 notes inside it');
 

@@ -21,10 +21,11 @@ test.describe('the chord strip', () => {
     await app.tapRow('Acordes de passagem');
 
     // Tensions, slash basses and diminished chords have no honest diagram — which is
-    // most of this chart. They used to be dropped silently, so the strip was an
-    // arbitrary subset and nothing distinguished "not in this song" from "no shape".
-    await expect(app.text('no shape').first()).toBeVisible();
-    await expect(app.text('C6(9)')).toHaveCount(2);
+    // most of this chart. Dropping them silently made the strip an arbitrary subset;
+    // giving each an empty box put a rail of nothing before the first lyric. They are
+    // named on one line instead.
+    await expect(app.page.getByText(/^No shape: /)).toBeVisible();
+    await expect(app.page.getByText(/^No shape: /)).toContainText('C6(9)');
   });
 
   test('reaches the bass row of the chord builder', async ({ app }) => {
