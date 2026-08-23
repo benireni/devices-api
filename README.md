@@ -26,7 +26,8 @@ stays reusable by a web client or a server later.
 
 ## Getting started
 
-Requires Node 22+ and, to run on a device, Xcode.
+Requires Node 22+ and, to build for a device, a Mac with Xcode and CocoaPods.
+The generated project targets **iOS 16.4**, so the phone has to be on that or later.
 
 ```bash
 npm install
@@ -37,10 +38,25 @@ npm start --workspace @qtdn/mobile
 **Today, Expo Go works.** Every current dependency ships inside it, so the fastest way
 onto a phone is `npm start --workspace @qtdn/mobile` and scanning the QR code.
 
-That stops being true the moment the Voice Memos share extension lands, since Expo Go
-cannot host a native module it wasn't built with. From then on qtdn needs a development
-build: `npm run ios --workspace @qtdn/mobile` compiles and installs one on a simulator or
-a connected device.
+Two things Expo Go cannot give you: the notes live inside Expo Go's own sandbox rather
+than qtdn's, and it needs your Mac serving the bundle — no use at a rehearsal. And it
+stops being an option entirely once the Voice Memos share extension lands, since Expo Go
+cannot host a native module it wasn't built with.
+
+For a real install, signed with a free Apple ID:
+
+```bash
+npm run ios --workspace @qtdn/mobile -- --device --configuration Release
+```
+
+`--configuration Release` is the part that matters: without it the app expects Metro on
+your Mac for as long as it runs. The first invocation generates `apps/mobile/ios/` from
+`app.json` and will stop at code signing — open `apps/mobile/ios/qtdn.xcworkspace`
+(created by the CocoaPods step, so only after that first run), pick your personal team
+under Signing & Capabilities, and run it again.
+
+A free account signs for **seven days**, so this is a weekly command. Notes are files in
+the app's own container and survive reinstalling over the top.
 
 ## Commands
 
