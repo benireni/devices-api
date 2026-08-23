@@ -1,5 +1,5 @@
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -55,7 +55,13 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <StatusBar style="light" />
-      <ErrorBoundary>
+      <ErrorBoundary
+        onReset={() => {
+          // The boundary wraps the Stack, so whatever threw is still the current route.
+          // Recovery has to land somewhere known.
+          router.replace('/');
+        }}
+      >
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: color.background },

@@ -1,4 +1,5 @@
 import {
+  appendPoint,
   appendSection,
   isFence,
   isTabStart,
@@ -14,12 +15,14 @@ import {
   type LyricLine,
 } from '@qtdn/chordpro';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+
+import { useDiscardGuard } from '@/hooks/useDiscardGuard';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { library } from '@/data';
 import { log } from '@/observability';
-import { begin, canUndo, commit, undo, type History } from '@/editing/history';
+import { amend, begin, canUndo, commit, undo, type History } from '@/editing/history';
 import {
   Button,
   ChordPicker,
@@ -48,10 +51,11 @@ export default function ComposeScreen() {
   const lines = history?.present ?? null;
   const [editing, setEditing] = useState<number | null>(null);
   const [target, setTarget] = useState<{ line: number; offset: number; label: string } | null>(null);
+  /** Whether the open chord picker has already taken its undo step. */
+  const building = useRef(false);
   const [menu, setMenu] = useState<number | null>(null);
   const [sectioning, setSectioning] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const [leaving, setLeaving] = useState(false);
 
   /**
    * Re-read on every focus, not once on mount.
@@ -97,7 +101,19 @@ export default function ComposeScreen() {
     if (lines === null || target === null) return;
     const node = lyricAt(lines, target.line);
     if (node === null) return;
-    replace(target.line, renderLine(setChordAt(node, target.offset, chord)));
+
+    const next = renderLine(setChordAt(node, target.offset, chord));
+    const write = (current: string[]) => current.map((line, i) => (i === target.line ? next : line));
+
+    // Building a chord is one act however many chips it takes. Committing each press
+    // meant undo walked back through Dm7, Dm, D instead of removing the chord.
+    setHistory((current) => {
+      if (current === null) return current;
+      if (building.current) return amend(current, write(current.present));
+
+      building.current = true;
+      return commit(current, write(current.present), sameLines);
+    });
   }
 
   /** Line operations, all of them pure functions over the source lines. */
@@ -110,6 +126,9 @@ export default function ComposeScreen() {
     if (lines === null) return;
     try {
       await library.saveNote(id, folder ?? null, lines.join('\n'));
+      // The buffer is the file now, so leaving is not discarding anything. Without this
+      // the guard fired on the way out of a successful save.
+      setHistory(begin(lines));
       router.back();
     } catch (cause) {
       // Never navigate away from work that was not written. The buffer is still here.
@@ -126,13 +145,19 @@ export default function ComposeScreen() {
    * a second, divergent copy.
    */
   async function openTab(line?: number) {
-    if (lines !== null) await library.saveNote(id, folder ?? null, lines.join('\n'));
+    // Only when there is something to commit. Tapping a tab block to look at it used to
+    // write the whole buffer to disk, which made "discard" a promise the screen could
+    // not keep.
+    if (lines !== null && dirty) await library.saveNote(id, folder ?? null, lines.join('\n'));
     const query = [
       ...(line === undefined ? [] : [`line=${String(line)}`]),
       ...(folder === undefined ? [] : [`folder=${folder}`]),
     ];
     router.push(`/tab/${id}${query.length === 0 ? '' : `?${query.join('&')}`}`);
   }
+
+  const dirty = history !== null && canUndo(history);
+  const { asking, discard, keep } = useDiscardGuard(dirty);
 
   const current = target === null || lines === null ? null : lyricAt(lines, target.line);
   const owners = useMemo(() => tabOwners(lines ?? []), [lines]);
@@ -168,12 +193,23 @@ export default function ComposeScreen() {
           />
         ))}
 
+        {/*
+          The app is built on one gesture nothing on screen mentions. Shown only until
+          the note has a lyric line, because after that the chart teaches it.
+        */}
+        {!(lines ?? []).some(isLyric) && (
+          <Text variant="caption" tone="textMuted" style={{ marginTop: space.lg }}>
+            Tap a word to put a chord over it. Hold a line for more.
+          </Text>
+        )}
+
         <View style={styles.tools}>
           <Button
             label="Add line"
             onPress={() => {
-              edit((current) => [...current, '']);
-              setEditing((lines ?? []).length);
+              const at = appendPoint(lines ?? []);
+              edit((current) => [...current.slice(0, at), '', ...current.slice(at)]);
+              setEditing(at);
             }}
             style={{ flex: 1 }}
           />
@@ -195,17 +231,12 @@ export default function ComposeScreen() {
       </ScrollView>
 
       <ConfirmSheet
-        visible={leaving}
+        visible={asking}
         title="Discard changes?"
-        message="This note goes back to how it was when you opened it."
+        message="This note goes back to the last time it was saved."
         confirmLabel="Discard"
-        onConfirm={() => {
-          setLeaving(false);
-          router.back();
-        }}
-        onCancel={() => {
-          setLeaving(false);
-        }}
+        onConfirm={discard}
+        onCancel={keep}
       />
 
       {problem !== null && (
@@ -218,10 +249,7 @@ export default function ComposeScreen() {
         <Button
           label="Close"
           onPress={() => {
-            if (history !== null && canUndo(history)) {
-              setLeaving(true);
-              return;
-            }
+            // The guard on the navigation event asks; this is only the visible way out.
             router.back();
           }}
           style={{ flex: 1 }}
@@ -259,6 +287,7 @@ export default function ComposeScreen() {
           {
             key: 'delete',
             label: 'Delete',
+            tone: 'danger' as const,
             subtitle:
               menu !== null && opensBlock(lines ?? [], menu)
                 ? 'Removes the whole block this opens'
@@ -311,6 +340,7 @@ export default function ComposeScreen() {
         current={current === null || target === null ? null : chordAt(current, target.offset)}
         onSelect={applyChord}
         onDismiss={() => {
+          building.current = false;
           setTarget(null);
         }}
       />
@@ -351,7 +381,10 @@ function Line({
     );
   }
 
-  const node = parse(source).chart.nodes[0];
+  // A blank line is a bar with nothing sung over it — the domain already offers it a
+  // slot. Rendered as metadata it was a 16pt strip that answered only to a long press,
+  // which is neither discoverable nor reachable with a thumb.
+  const node = source.trim() === '' ? EMPTY_LINE : parse(source).chart.nodes[0];
 
   if (isTabStart(source)) {
     return (
@@ -434,6 +467,12 @@ function LineEditor({ initial, onDone }: { initial: string; onDone: (text: strin
 }
 
 /** Documents are new arrays on every edit, so identity is not a useful comparison. */
+/** Whether a source line carries words, as opposed to metadata or a fence. */
+function isLyric(source: string): boolean {
+  const node = parse(source).chart.nodes[0];
+  return node !== undefined && node.kind === 'lyric';
+}
+
 function sameLines(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((line, index) => line === b[index]);
 }
@@ -443,9 +482,14 @@ function opensBlock(lines: string[], index: number): boolean {
   return isFence(lines[index] ?? '');
 }
 
+/** An empty line still offers one slot, so a chord can be placed before any lyric. */
+const EMPTY_LINE: LyricLine = { kind: 'lyric', segments: [{ chord: null, text: '' }] };
+
 function lyricAt(lines: string[], index: number): LyricLine | null {
   const source = lines[index];
   if (source === undefined) return null;
+  if (source.trim() === '') return EMPTY_LINE;
+
   const node = parse(source).chart.nodes[0];
   return node !== undefined && node.kind === 'lyric' ? node : null;
 }

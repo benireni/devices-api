@@ -56,10 +56,15 @@ export default function LibraryScreen() {
   // Search results are notes like any others, so they follow the order the user chose.
   // They used to arrive in scan order, which quietly ignored a persisted preference.
   const found = useMemo(() => sortNotes(results, order), [results, order]);
-  const unfiled = notes.filter((note) => note.folder === null);
-  const isEmpty = snapshot.folders.length === 0 && unfiled.length === 0;
+  // Sorting by recency answers "what was I working on", and the answer is rarely
+  // unfiled — the app encourages folders, and filing a note used to hide it from the
+  // only listing the sort control governs. Title order stays scoped, because an
+  // alphabetical list of everything is what search is for.
+  const listed = order === 'title' ? notes.filter((note) => note.folder === null) : notes;
+  const isEmpty = snapshot.folders.length === 0 && notes.length === 0;
 
   async function importFile() {
+    setProblem(null);
     try {
       const id = await importNote(null);
       await reload();
@@ -67,12 +72,17 @@ export default function LibraryScreen() {
     } catch (cause) {
       // share.ts throws precisely so the caller can say so. It used to say nothing, and
       // the only record was a log screen with no way into it.
+      // `transfer.ts` says which of several things went wrong — that it is too large,
+      // for instance. Replacing that with a guess about the format helps nobody.
       log.error('note.import.failed', cause);
-      setProblem('Could not read that file. It may not be a chord chart.');
+      setProblem(
+        cause instanceof Error ? cause.message : 'Could not read that file.',
+      );
     }
   }
 
   async function newNote(title: string) {
+    setProblem(null);
     setNaming(false);
     const id = await library.createNote(null, title.trim());
     await reload();
@@ -83,7 +93,7 @@ export default function LibraryScreen() {
     <Screen>
       <Stack.Screen options={{ title: 'qtdn' }} />
 
-      <TextField value={query} onChangeText={setQuery} placeholder="Search notes" />
+      <TextField search value={query} onChangeText={setQuery} placeholder="Search notes" />
 
       {/*
         Outside the Notes section on purpose. The sort control used to live in that
@@ -95,7 +105,7 @@ export default function LibraryScreen() {
       <View style={styles.controls}>
         <Pressable
           accessibilityRole="button"
-          hitSlop={space.md}
+          hitSlop={space.lg}
           onPress={() => {
             setOrdering(true);
           }}
@@ -106,7 +116,7 @@ export default function LibraryScreen() {
         </Pressable>
         <Pressable
           accessibilityRole="button"
-          hitSlop={space.md}
+          hitSlop={space.lg}
           onPress={() => {
             router.push('/logs');
           }}
@@ -155,15 +165,17 @@ export default function LibraryScreen() {
             </Section>
           )}
 
-          {unfiled.length > 0 && (
-            <Section label="Notes">
-              {unfiled.map((note) => (
+          {listed.length > 0 && (
+            <Section label={order === 'title' ? 'Notes' : 'All notes'}>
+              {listed.map((note) => (
                 <ListRow
                   key={note.id}
                   title={note.title}
-                  subtitle={note.artist ?? undefined}
+                  subtitle={note.artist ?? note.folder ?? undefined}
                   onPress={() => {
-                    router.push(`/note/${note.id}`);
+                    router.push(
+                      `/note/${note.id}${note.folder === null ? '' : `?folder=${encodeURIComponent(note.folder)}`}`,
+                    );
                   }}
                 />
               ))}

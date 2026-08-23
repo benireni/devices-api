@@ -2,10 +2,11 @@ import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
-import { parse } from '@qtdn/chordpro';
+import { parse, type Diagnostic } from '@qtdn/chordpro';
 import { library } from '@/data';
 import { log } from '@/observability';
-import { Button, Screen, Text, TextField } from '@/ui/components';
+import { useDiscardGuard } from '@/hooks/useDiscardGuard';
+import { Button, ConfirmSheet, Screen, Text, TextField } from '@/ui/components';
 import { space } from '@/ui/tokens';
 
 /**
@@ -19,11 +20,14 @@ export default function EditScreen() {
   const { id, folder } = useLocalSearchParams<{ id: string; folder?: string }>();
   const [source, setSource] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  /** The text as loaded, so "dirty" means changed rather than merely opened. */
+  const [loaded, setLoaded] = useState<string | null>(null);
 
   useEffect(() => {
     void library.readNote(id, folder ?? null).then(
       (note) => {
         setSource(note.source);
+        setLoaded(note.source);
       },
       (cause: unknown) => {
         log.error('note.read.failed', cause, { id });
@@ -31,6 +35,8 @@ export default function EditScreen() {
       },
     );
   }, [id, folder]);
+
+  const { asking, discard, keep } = useDiscardGuard(source !== null && source !== loaded);
 
   // Diagnostics are advisory while typing: a half-written chart is not an error state.
   const diagnostics = useMemo(
@@ -42,6 +48,7 @@ export default function EditScreen() {
     if (source === null) return;
     try {
       await library.saveNote(id, folder ?? null, source);
+      setLoaded(source);
       router.back();
     } catch (cause) {
       log.error('note.save.rejected', cause, { id });
@@ -52,6 +59,16 @@ export default function EditScreen() {
   return (
     <Screen>
       <Stack.Screen options={{ title: 'Edit source' }} />
+
+      <ConfirmSheet
+        visible={asking}
+        title="Discard changes?"
+        message="This note goes back to the last time it was saved."
+        confirmLabel="Discard"
+        onConfirm={discard}
+        onCancel={keep}
+      />
+
       <KeyboardAvoidingView
         style={styles.fill}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -65,7 +82,7 @@ export default function EditScreen() {
             {problem ??
               (diagnostics.length === 0
               ? 'Parses cleanly'
-                : `${String(diagnostics.length)} issue${diagnostics.length === 1 ? '' : 's'}: ${diagnostics[0]?.message ?? ''}`)}
+                : describe(diagnostics))}
           </Text>
           <Button
             label="Save"
@@ -78,6 +95,16 @@ export default function EditScreen() {
       </KeyboardAvoidingView>
     </Screen>
   );
+}
+
+/** Says where, not just what: hunting one unclosed bracket by eye in a pasted chart is
+ *  the whole reason the parser reports a line number. */
+function describe(diagnostics: readonly Diagnostic[]): string {
+  const [first] = diagnostics;
+  if (first === undefined) return '';
+
+  const count = diagnostics.length === 1 ? '1 issue' : `${String(diagnostics.length)} issues`;
+  return `${count} — line ${String(first.line)}: ${first.message}`;
 }
 
 const styles = StyleSheet.create({

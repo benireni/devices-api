@@ -162,6 +162,7 @@ export default function NoteScreen() {
       await library.moveNote(id, from, to);
     } catch (cause) {
       log.error('note.move.rejected', cause, { id });
+      setMoving(false);
       setProblem('Could not move this note.');
       return;
     }
@@ -190,7 +191,7 @@ export default function NoteScreen() {
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Actions"
-                hitSlop={space.md}
+                hitSlop={space.lg}
                 onPress={() => {
                   setActing(true);
                 }}
@@ -236,12 +237,15 @@ export default function NoteScreen() {
           )}
           <ChordStrip chords={chordsUsed(chart)} />
           <ChartView chart={chart} />
-          {problem !== null && (
-            <Text variant="caption" tone="danger" style={{ marginTop: space.md }}>
-              {problem}
-            </Text>
-          )}
         </ScrollView>
+      )}
+
+      {/* Above the control bar, not below the chart: inside the ScrollView it sat a
+          screen-height past the last lyric, where nobody would ever see it. */}
+      {problem !== null && (
+        <Text variant="caption" tone="danger" style={{ marginBottom: space.sm }}>
+          {problem}
+        </Text>
       )}
 
       {note !== null && (
@@ -267,10 +271,16 @@ export default function NoteScreen() {
           { key: 'rename', label: 'Rename' },
           ...(destinations.length === 0 ? [] : [{ key: 'move', label: 'Move' }]),
           { key: 'share', label: 'Share' },
-          { key: 'delete', label: 'Delete', subtitle: 'Removes it from this device' },
+          {
+            key: 'delete',
+            label: 'Delete',
+            subtitle: 'Removes it from this device',
+            tone: 'danger' as const,
+          },
         ]}
         onSelect={(action) => {
           setActing(false);
+          setProblem(null);
           if (action === 'edit') router.push(`/compose/${id}${suffix}`);
           if (action === 'source') router.push(`/edit/${id}${suffix}`);
           if (action === 'rename') setRenaming(true);

@@ -9,6 +9,7 @@ import { log } from '@/observability';
 import {
   Button,
   ConfirmSheet,
+  OptionSheet,
   EmptyState,
   ListRow,
   PromptSheet,
@@ -24,6 +25,7 @@ export default function FolderScreen() {
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [naming, setNaming] = useState(false);
+  const [acting, setActing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function rename(next: string) {
@@ -53,7 +55,7 @@ export default function FolderScreen() {
       if (id !== null) router.push(`/note/${id}?folder=${encodeURIComponent(name)}`);
     } catch (cause) {
       log.error('note.import.failed', cause);
-      setError('Could not read that file. It may not be a chord chart.');
+      setError(cause instanceof Error ? cause.message : 'Could not read that file.');
     }
   }
 
@@ -91,28 +93,14 @@ export default function FolderScreen() {
         </Text>
       )}
 
+      {/* Two buttons, not four. Four `flex: 1` buttons at 393pt leave about 48pt for a
+          label after padding, so "New note" broke across two lines — and a red folder
+          Delete sat directly beside the primary action. */}
       <View style={styles.actions}>
         <Button
-          label="Import"
+          label="Actions"
           onPress={() => {
-            setError(null);
-            void importFile();
-          }}
-          style={{ flex: 1 }}
-        />
-        <Button
-          label="Rename"
-          onPress={() => {
-            setError(null);
-            setRenaming(true);
-          }}
-          style={{ flex: 1 }}
-        />
-        <Button
-          label="Delete"
-          variant="danger"
-          onPress={() => {
-            setDeleting(true);
+            setActing(true);
           }}
           style={{ flex: 1 }}
         />
@@ -125,6 +113,33 @@ export default function FolderScreen() {
           style={{ flex: 1 }}
         />
       </View>
+
+      <OptionSheet
+        visible={acting}
+        title="This folder"
+        subtitle={name}
+        options={[
+          { key: 'import', label: 'Import a note', subtitle: 'From a file on this device' },
+          { key: 'rename', label: 'Rename' },
+          {
+            key: 'delete',
+            label: 'Delete',
+            tone: 'danger' as const,
+            subtitle:
+              notes.length === 0 ? 'This folder is empty' : `Takes ${String(notes.length)} notes with it`,
+          },
+        ]}
+        onSelect={(action) => {
+          setActing(false);
+          setError(null);
+          if (action === 'import') void importFile();
+          if (action === 'rename') setRenaming(true);
+          if (action === 'delete') setDeleting(true);
+        }}
+        onCancel={() => {
+          setActing(false);
+        }}
+      />
 
       <PromptSheet
         visible={naming}
