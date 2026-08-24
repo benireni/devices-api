@@ -25,8 +25,28 @@ test.describe('the reading screen', () => {
     ).toBeVisible();
   });
 
+  test('holds the screen on for reading, without playing anything', async ({ app }) => {
+    const awake = app.page.getByRole('button', { name: 'Keep the screen on' });
+    await expect(awake).toBeVisible();
+
+    await awake.click();
+
+    // A reading control, not a playback one: the chart must not start moving, and the
+    // toggle has to say it is on rather than leaving you to guess.
+    await expect(app.page.getByRole('button', { name: /Screen stays on/ })).toBeVisible();
+    await expect(app.button('Play')).toBeVisible();
+    await expect(app.button('Stop')).toHaveCount(0);
+  });
+
+  test('turns the screen lock back off', async ({ app }) => {
+    await app.page.getByRole('button', { name: 'Keep the screen on' }).click();
+    await app.page.getByRole('button', { name: /Screen stays on/ }).click();
+
+    await expect(app.page.getByRole('button', { name: 'Keep the screen on' })).toBeVisible();
+  });
+
   test('keeps every control it plays with above the thumb line', async ({ app }) => {
-    for (const name of ['Slower', 'Faster', 'Play']) {
+    for (const name of ['Slower', 'Faster', 'Play', 'Keep the screen on']) {
       const box = await app.button(name).first().boundingBox();
       expect(box, `${name} is on screen`).not.toBeNull();
       expect(box?.width ?? 0, `${name} is wide enough to hit`).toBeGreaterThanOrEqual(44);

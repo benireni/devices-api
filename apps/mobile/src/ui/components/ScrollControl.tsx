@@ -10,7 +10,10 @@ export interface ScrollControlProps {
   speed: number;
   /** False when the chart fits the screen, so there is nothing to scroll. */
   playable?: boolean;
+  /** Whether the screen is being held on for reading, independently of playback. */
+  awake: boolean;
   onToggle: () => void;
+  onToggleAwake: () => void;
   onAdjust: (steps: number) => void;
 }
 
@@ -20,16 +23,29 @@ export interface ScrollControlProps {
  * One large control to start and stop, because it is pressed mid-song with one hand
  * while the other is on the neck. Speed sits beside it rather than behind a settings
  * screen — it is adjusted while playing or not at all.
+ *
+ * `Awake` sits here too rather than behind the actions sheet: holding the display on is
+ * something you want *while reading*, which is when this bar is the only chrome on
+ * screen. Two filled controls can share the bar because they are not competing for the
+ * same job — one is the action, the other is a state you can see at a glance.
  */
 export function ScrollControl({
   running,
   speed,
   playable = true,
+  awake,
   onToggle,
+  onToggleAwake,
   onAdjust,
 }: ScrollControlProps) {
   return (
     <View style={styles.bar}>
+      <Button
+        label="Awake"
+        accessibilityLabel={awake ? 'Screen stays on. Turn off' : 'Keep the screen on'}
+        selected={awake}
+        onPress={onToggleAwake}
+      />
       <Button
         label="−"
         accessibilityLabel="Slower"

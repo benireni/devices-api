@@ -36,3 +36,18 @@ All logic lives in `scroll.ts` and is tested under plain Node. `useAutoScroll.ts
 excluded from coverage as a platform binding: animation frames, a ScrollView ref and the
 keep-awake lock, with no decisions of its own. If a change to it needs a test, extract the
 decision into `scroll.ts` first — that is what happened to `shouldResync`.
+
+## Keeping the screen on
+
+`useKeepAwake` is the single owner of the wake lock, and the reading screen holds it for
+whatever reasons currently apply — playback, the `Awake` toggle, or both.
+
+It was auto-scroll's to take, which was right while playing was the only reason to want
+it. It stopped being right the moment reading became a second reason: two owners sharing
+one tag means whichever releases first drops the lock the other still needs, so stopping
+playback would have let the screen dim under a reader who had explicitly asked it not to.
+
+The toggle is deliberately **not** persisted — not into the note, not across notes. Scroll
+speed is a property of a song; wanting the display to stay on is a property of what you
+are doing in the next ten minutes. It releases when you leave the screen, because the
+failure mode of getting this wrong is a flat battery in a bag.

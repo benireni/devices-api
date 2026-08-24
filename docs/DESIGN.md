@@ -304,8 +304,16 @@ and the UI does not push you toward it.
 
 Read-only rendering: large chord glyphs, dimmed lyrics, chord diagrams in a header strip
 for the shapes used in the song, and hands-free auto-scroll at a per-song speed stored in
-`x_qtdn_scroll`. Auto-scroll starts from a single large control and keeps the screen
-awake. No editing affordances visible.
+`x_qtdn_scroll`. Auto-scroll starts from a single large control.
+
+An `Awake` toggle on the same bar holds the display on without playing anything, because
+reading a chart at a table is the other half of what this screen is for and most apps let
+the screen go dark in the middle of it. The wake lock has one owner and is held while
+either reason applies. Unlike scroll speed it is not persisted anywhere: speed is a
+property of a song, wanting the screen on is a property of the next ten minutes, and the
+failure mode of remembering it is a flat battery.
+
+No editing affordances visible.
 
 ---
 

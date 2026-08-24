@@ -24,7 +24,8 @@ export default defineConfig({
         'apps/mobile/src/data/index.ts', // composition root
         'apps/mobile/src/observability/index.ts', // composition root
         '**/adapters/expoFileStore.ts', // platform binding; cannot run under Node
-        '**/useAutoScroll.ts', // platform binding: animation frames, refs, keep-awake
+        '**/useAutoScroll.ts', // platform binding: animation frames and refs
+        '**/useKeepAwake.ts', // platform binding: the OS wake lock
         'apps/mobile/src/data/share.ts', // platform binding: share sheet and document picker
         // Platform binding: navigation focus. Zero branches — it awaits, sets state and
         // memoizes, and every decision it defers to (sortNotes, readOrder, settings) is

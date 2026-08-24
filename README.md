@@ -118,7 +118,8 @@ saved from another. It is tested with generated charts in
 |---|---|---|
 | ![Raw source](docs/images/screen-editor.png) | ![Logs](docs/images/screen-logs.png) | ![Tensions](docs/images/screen-note-tensions.png) |
 
-The song screen carries the chord diagrams for the chords it uses and an auto-scroll bar.
+The song screen carries the chord diagrams for the chords it uses, an auto-scroll bar, and
+an `Awake` toggle that holds the display on while you read without scrolling anything.
 Chords are placed by tapping the word they sit above and building a symbol from its parts;
 the raw editor is the escape hatch for pasting a chart off the web.
 

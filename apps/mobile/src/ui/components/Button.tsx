@@ -10,6 +10,8 @@ export interface ButtonProps {
   onPress: () => void;
   /** `primary` is the identity green; use at most one per screen. */
   variant?: 'primary' | 'secondary' | 'danger';
+  /** A toggle that is currently on. Reads as the identity fill, and announces itself. */
+  selected?: boolean;
   disabled?: boolean;
   style?: Pick<ViewStyle, 'marginTop' | 'marginBottom' | 'alignSelf' | 'flex'>;
 }
@@ -19,6 +21,7 @@ export function Button({
   accessibilityLabel,
   onPress,
   variant = 'secondary',
+  selected = false,
   disabled = false,
   style,
 }: ButtonProps) {
@@ -26,18 +29,18 @@ export function Button({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled }}
+      accessibilityState={{ disabled, selected }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
-        styles[variant],
+        styles[selected ? 'primary' : variant],
         pressed && styles.pressed,
         disabled && styles.disabled,
         style,
       ]}
     >
-      <Text variant="label" tone={variant === 'primary' ? 'background' : toneFor(variant)}>
+      <Text variant="label" tone={selected || variant === 'primary' ? 'background' : toneFor(variant)}>
         {label}
       </Text>
     </Pressable>

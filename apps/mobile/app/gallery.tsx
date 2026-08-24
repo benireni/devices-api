@@ -67,6 +67,7 @@ export default function Gallery() {
   const [open, setOpen] = useState<SheetName | null>(null);
   const [field, setField] = useState('Garota de Ipanema');
   const [playing, setPlaying] = useState(false);
+  const [awake, setAwake] = useState(false);
 
   return (
     <Screen>
@@ -113,13 +114,25 @@ export default function Gallery() {
           <ScrollControl
             running={playing}
             speed={25}
+            awake={awake}
             onToggle={() => {
               setPlaying(!playing);
+            }}
+            onToggleAwake={() => {
+              setAwake(!awake);
             }}
             onAdjust={noop}
           />
           <View style={{ height: space.md }} />
-          <ScrollControl running={false} speed={25} playable={false} onToggle={noop} onAdjust={noop} />
+          <ScrollControl
+            running={false}
+            speed={25}
+            playable={false}
+            awake
+            onToggle={noop}
+            onToggleAwake={noop}
+            onAdjust={noop}
+          />
         </Section>
 
         <Section title="Sheets">

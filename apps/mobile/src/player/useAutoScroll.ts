@@ -1,8 +1,6 @@
-import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ScrollView } from 'react-native';
 
-import { log } from '@/observability';
 import { advance, hasReachedEnd, shouldResync } from './scroll';
 
 /**
@@ -12,9 +10,9 @@ import { advance, hasReachedEnd, shouldResync } from './scroll';
  * less than half a pixel, so rounding per frame would leave the chart perfectly still,
  * and putting it in state would re-render sixty times a second for no reason.
  *
- * Holds the screen awake only while running.
+ * Does not hold the screen awake itself: the reading screen owns that, because playback
+ * is no longer the only reason to want it. See `useKeepAwake`.
  */
-const KEEP_AWAKE_TAG = 'qtdn-player';
 
 export function useAutoScroll(speed: number) {
   const [running, setRunning] = useState(false);
@@ -25,16 +23,6 @@ export function useAutoScroll(speed: number) {
 
   useEffect(() => {
     if (!running) return;
-
-    // Only while playing. A chart that holds the display on after you have stopped is a
-    // flat battery, and `useKeepAwake` has no way to be conditionally inactive.
-    //
-    // Best-effort: a platform may refuse. Playing with the screen free to dim is worse
-    // than playing with it held on, and far better than an unhandled rejection — which
-    // is what a bare `void` produced everywhere the permission was denied.
-    void activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch((cause: unknown) => {
-      log.warn('player.keepAwake.refused', { reason: String(cause) });
-    });
 
     // Starting from the end means starting again. Without this, pressing Play on a
     // finished song stopped on the first frame and left you to scroll back by hand —
@@ -53,9 +41,9 @@ export function useAutoScroll(speed: number) {
       previous = now;
       scroller.current?.scrollTo({ y: offset.current, animated: false });
 
-      // The song is over. Stopping here is what releases the keep-awake lock, which
-      // otherwise held the screen on at the bottom of a finished chart until someone
-      // picked the phone up — the gesture auto-scroll exists to avoid.
+      // The song is over. Stopping releases the lock the reading screen holds on
+      // playback's behalf, which otherwise kept the display on at the bottom of a
+      // finished chart until someone picked the phone up.
       if (hasReachedEnd(offset.current, bounds.content, bounds.viewport)) {
         setRunning(false);
         return;
@@ -67,8 +55,6 @@ export function useAutoScroll(speed: number) {
     frame = requestAnimationFrame(tick);
     return () => {
       cancelAnimationFrame(frame);
-      // Nothing to release when activation was refused, and saying so is not news.
-      void deactivateKeepAwake(KEEP_AWAKE_TAG).catch(() => undefined);
     };
   }, [running, speed, bounds]);
 

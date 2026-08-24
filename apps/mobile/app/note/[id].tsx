@@ -9,6 +9,7 @@ import { useLibrary } from '@/hooks/useLibrary';
 import { log } from '@/observability';
 import { DEFAULT_SPEED, adjustSpeed, readSpeed } from '@/player/scroll';
 import { useAutoScroll } from '@/player/useAutoScroll';
+import { useKeepAwake } from '@/player/useKeepAwake';
 import {
   ChartView,
   ChordStrip,
@@ -42,6 +43,20 @@ export default function NoteScreen() {
   const unsaved = useRef<string | null>(null);
   const from = folder ?? null;
   const { running, setRunning, scroller, syncOffset, measure, playable } = useAutoScroll(speed);
+  /**
+   * Held for reading, not for playing.
+   *
+   * Deliberately not written into the note and not carried between notes: scroll speed
+   * is a property of a song, but wanting the screen to stay on is a property of what you
+   * are doing right now. It releases when you leave, which is the safe default for a
+   * setting whose failure mode is a flat battery.
+   */
+  const [awake, setAwake] = useState(false);
+
+  // One lock, whatever the reasons for wanting it. Playback stopping must not release a
+  // lock the reader still asked for.
+  useKeepAwake(running || awake);
+
   const content = useRef(0);
   const viewport = useRef(0);
 
@@ -253,8 +268,12 @@ export default function NoteScreen() {
           running={running}
           speed={speed}
           playable={playable}
+          awake={awake}
           onToggle={() => {
             setRunning(!running);
+          }}
+          onToggleAwake={() => {
+            setAwake(!awake);
           }}
           onAdjust={(steps) => {
             setSpeed((current) => adjustSpeed(current, steps));
