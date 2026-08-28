@@ -1,6 +1,7 @@
 import {
   appendPoint,
   appendSection,
+  insideSection,
   isFence,
   isTabStart,
   QTDN_PREFIX,
@@ -175,6 +176,7 @@ export default function ComposeScreen() {
 
   const current = target === null || lines === null ? null : lyricAt(lines, target.line);
   const owners = useMemo(() => tabOwners(lines ?? []), [lines]);
+  const inSection = useMemo(() => insideSection(lines ?? []), [lines]);
 
   return (
     <Screen>
@@ -186,6 +188,7 @@ export default function ComposeScreen() {
             key={index}
             source={line}
             inTab={(owners[index] ?? null) !== null}
+            inSection={inSection[index] ?? false}
             editing={editing === index}
             onEdit={() => {
               setMenu(index);
@@ -213,7 +216,8 @@ export default function ComposeScreen() {
         */}
         {!(lines ?? []).some(isLyric) && (
           <Text variant="caption" tone="textMuted" style={{ marginTop: space.lg }}>
-            Tap a word to put a chord over it. Hold a line for more.
+            {/* "Tap a word" was the advice on a screen with no words on it. */}
+            Add a line, then tap a word to put a chord over it. Hold a line for more.
           </Text>
         )}
 
@@ -368,6 +372,7 @@ export default function ComposeScreen() {
 function Line({
   source,
   inTab,
+  inSection,
   editing,
   onEdit,
   onEditDone,
@@ -376,6 +381,8 @@ function Line({
 }: {
   source: string;
   inTab: boolean;
+  /** Whether this line sits between a section's fences, where a bar can exist. */
+  inSection: boolean;
   editing: boolean;
   onEdit: () => void;
   onEditDone: (text: string) => void;
@@ -398,10 +405,11 @@ function Line({
     );
   }
 
-  // A blank line is a bar with nothing sung over it — the domain already offers it a
-  // slot. Rendered as metadata it was a 16pt strip that answered only to a long press,
-  // which is neither discoverable nor reachable with a thumb.
-  const node = source.trim() === '' ? EMPTY_LINE : parse(source).chart.nodes[0];
+  // A blank line inside a section is a bar with nothing sung over it — the domain
+  // already offers it a slot, and rendered as metadata it was a 16pt strip that answered
+  // only to a long press. Outside a section it is spacing in the file, and offering a
+  // chord there would write one somewhere no chart shows it.
+  const node = source.trim() === '' && inSection ? EMPTY_LINE : parse(source).chart.nodes[0];
 
   if (isTabStart(source)) {
     return (

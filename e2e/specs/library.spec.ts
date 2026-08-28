@@ -116,6 +116,17 @@ test.describe('library', () => {
     await expect(app.button('Actions')).toBeVisible();
   });
 
+  test('says which folder a note is in when listing everything', async ({ app }) => {
+    await app.open();
+    await app.tap('Sort: Title');
+    await app.tapInSheet('Recently edited');
+
+    // In a folder the artist is the useful subtitle, because the folder is implied. In a
+    // list of everything the folder is the one thing you cannot otherwise tell.
+    await expect(app.row('Corcovado')).toContainText('Repertório');
+    await expect(app.row('Corcovado')).toContainText('Tom Jobim');
+  });
+
   test('a search result opens its note', async ({ app }) => {
     await app.open();
     await app.field('Search notes').fill('corcovado');

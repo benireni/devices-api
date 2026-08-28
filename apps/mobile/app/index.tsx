@@ -171,7 +171,7 @@ export default function LibraryScreen() {
                 <ListRow
                   key={note.id}
                   title={note.title}
-                  subtitle={note.artist ?? note.folder ?? undefined}
+                  subtitle={describe(note)}
                   onPress={() => {
                     router.push(
                       `/note/${note.id}${note.folder === null ? '' : `?folder=${encodeURIComponent(note.folder)}`}`,
@@ -242,6 +242,18 @@ export default function LibraryScreen() {
       </View>
     </Screen>
   );
+}
+
+/**
+ * Who wrote it and where it lives.
+ *
+ * The artist alone was the subtitle, which is right in a folder — everything there
+ * shares a folder — and wrong in a list of everything, where the one thing you cannot
+ * otherwise tell is which folder a note is in.
+ */
+function describe(note: NoteSummary): string | undefined {
+  const parts = [note.artist, note.folder].filter((part) => part !== null && part !== '');
+  return parts.length === 0 ? undefined : parts.join(' · ');
 }
 
 function Section({ label, children }: { label: string; children: React.ReactNode }) {

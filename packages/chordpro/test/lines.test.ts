@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   appendPoint,
   appendSection,
+  insideSection,
   isFence,
   moveLine,
   removeLine,
@@ -200,5 +201,21 @@ describe('appendPoint', () => {
 
   it('appends at the end when the last block is still open', () => {
     expect(appendPoint(['{start_of_verse}', 'a'])).toBe(2);
+  });
+});
+
+describe('insideSection', () => {
+  it('marks the lines between a section’s fences, and not the fences', () => {
+    const lines = ['{title: Wave}', '', '{start_of_verse}', 'a', '', '{end_of_verse}', 'after'];
+
+    expect(insideSection(lines)).toEqual([false, false, false, true, true, false, false]);
+  });
+
+  it('marks nothing in a note with no sections', () => {
+    expect(insideSection(['{title: Wave}', '[C]a'])).toEqual([false, false]);
+  });
+
+  it('treats an unclosed section as running to the end', () => {
+    expect(insideSection(['{start_of_verse}', 'a', 'b'])).toEqual([false, true, true]);
   });
 });

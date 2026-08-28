@@ -177,3 +177,33 @@ export function appendPoint(lines: readonly string[]): number {
 
   return closes === null ? lines.length : index - 1;
 }
+
+/**
+ * Which lines sit inside a section, between its fences.
+ *
+ * A blank line inside a verse is a bar you might put a chord over. The same blank line
+ * between `{title}` and `{start_of_verse}` is just spacing in the file, and offering to
+ * hang a chord on it invites writing one somewhere no chart would ever show it.
+ */
+export function insideSection(lines: readonly string[]): boolean[] {
+  const inside = lines.map(() => false);
+  let open = false;
+
+  for (const [index, line] of lines.entries()) {
+    const name = directiveName(line);
+    const closes = name === null ? null : sectionEndName(name);
+    const opens = name === null ? null : sectionStartName(name);
+
+    if (closes !== null) {
+      open = false;
+      continue;
+    }
+    if (opens !== null) {
+      open = true;
+      continue;
+    }
+    inside[index] = open;
+  }
+
+  return inside;
+}

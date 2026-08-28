@@ -240,6 +240,17 @@ test.describe('the structured editor', () => {
     await expect(app.text('uma linha nova')).toBeVisible();
   });
 
+  test('tells a first-time writer what can be done now', async ({ app }) => {
+    await app.back();
+    await app.back();
+    await app.tap('New note');
+    await app.field('Title').fill('Vazia');
+    await app.tapInSheet('Create');
+
+    // The hint used to say "Tap a word" on a screen that has no words on it.
+    await expect(app.page.getByText(/Add a line, then tap a word/)).toBeVisible();
+  });
+
   test('adds a section', async ({ app }) => {
     await app.tap('Add section');
     await app.tapInSheet('Chorus');
