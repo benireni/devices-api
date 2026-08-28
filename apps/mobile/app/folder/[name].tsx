@@ -63,7 +63,7 @@ export default function FolderScreen() {
     setNaming(false);
     const id = await library.createNote(name, title.trim());
     await reload();
-    router.push(`/compose/${id}?folder=${encodeURIComponent(name)}`);
+    router.push(`/compose/${id}?folder=${encodeURIComponent(name)}&new=1`);
   }
 
   return (

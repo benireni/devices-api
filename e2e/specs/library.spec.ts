@@ -91,8 +91,29 @@ test.describe('library', () => {
     await app.tapInSheet('Create');
     await app.tap('Save');
 
+    // The chart you just wrote is on screen; the library is one step back.
+    await expect(app.text('Sabiá')).toHaveCount(2);
+    await app.back();
+
     await expect(app.row('Sabiá')).toBeVisible();
     await expect(app.row('Untitled')).toHaveCount(0);
+  });
+
+  test('ends a new note on the note, not back on the list', async ({ app }) => {
+    await app.open();
+    await app.tap('New note');
+    await app.field('Title').fill('Wave');
+    await app.tapInSheet('Create');
+    await app.tap('Add line');
+    await app.field('Lyrics').fill('vou te contar');
+    await app.tap('Done');
+    await app.tap('Save');
+
+    // Creation pushes straight into the editor, so there was no note screen behind it
+    // and saving dropped you on the library — the chart you had just written was
+    // something you then had to go and find.
+    await expect(app.text('vou te contar')).toBeVisible();
+    await expect(app.button('Actions')).toBeVisible();
   });
 
   test('a search result opens its note', async ({ app }) => {
@@ -110,6 +131,7 @@ test.describe('library', () => {
     await app.field('Title').fill('Zíngaro');
     await app.tapInSheet('Create');
     await app.tap('Save');
+    await app.back();
 
     // Last by title, newest by creation — so the two orders disagree about it.
     expect(await position(app, 'Corcovado')).toBeLessThan(await position(app, 'Zíngaro'));
@@ -150,6 +172,9 @@ test.describe('library', () => {
     await app.tapInSheet('Create');
     await expect(app.button('Add line')).toBeVisible();
     await app.tap('Save');
+    // Saving a new note lands on the note itself now, not back on the list.
+    await expect(app.button('Actions')).toBeVisible();
+    await app.back();
     await expect(app.row('Zíngaro')).toBeVisible();
 
     expect(await position(app, 'Ideia de sábado')).toBeLessThan(await position(app, 'Zíngaro'));

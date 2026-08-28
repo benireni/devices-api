@@ -86,7 +86,7 @@ export default function LibraryScreen() {
     setNaming(false);
     const id = await library.createNote(null, title.trim());
     await reload();
-    router.push(`/compose/${id}`);
+    router.push(`/compose/${id}?new=1`);
   }
 
   return (

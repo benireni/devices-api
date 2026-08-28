@@ -207,6 +207,7 @@ export default function NoteScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Actions"
                 hitSlop={space.lg}
+                style={styles.headerAction}
                 onPress={() => {
                   setActing(true);
                 }}
@@ -359,5 +360,7 @@ export default function NoteScreen() {
 }
 
 const styles = StyleSheet.create({
+  /** A header item gets no inset from the navigator, so it needs its own. */
+  headerAction: { paddingRight: space.md },
   content: { paddingBottom: space.xxl },
 });

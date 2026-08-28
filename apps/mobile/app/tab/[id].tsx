@@ -21,7 +21,9 @@ import { useDiscardGuard } from '@/hooks/useDiscardGuard';
 import { Button, ConfirmSheet, PromptSheet, Screen, Text } from '@/ui/components';
 import { HIT_SLOP, color, radius, space } from '@/ui/tokens';
 
-const FRETS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+// To fifteen. Twelve stopped short of positions an acoustic player uses constantly, and
+// the row already wraps, so the extra three cost a line and nothing else.
+const FRETS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
 const DEFAULT_COLUMNS = 8;
 
 /**
@@ -153,6 +155,7 @@ export default function TabScreen() {
               accessibilityRole="button"
               accessibilityLabel="Name this tab"
               hitSlop={space.lg}
+              style={styles.headerAction}
               onPress={() => {
                 setLabelling(true);
               }}
@@ -330,6 +333,9 @@ export default function TabScreen() {
 }
 
 const styles = StyleSheet.create({
+  // The navigator gives a header item no inset of its own, so it sat flush against the
+  // screen edge and the last character was clipped off.
+  headerAction: { paddingRight: space.md },
   notice: { flex: 1, justifyContent: 'center', padding: space.lg },
   stringRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   cell: {

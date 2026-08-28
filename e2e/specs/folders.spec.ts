@@ -79,6 +79,9 @@ test.describe('folders', () => {
     await app.tapInSheet('Create');
     await expect(app.button('Add line')).toBeVisible();
     await app.tap('Save');
+    // Saving a new note lands on the note itself now, not back on the list.
+    await expect(app.button('Actions')).toBeVisible();
+    await app.back();
 
     await expect(app.row('Ligia')).toBeVisible();
 

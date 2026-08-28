@@ -13,6 +13,7 @@ import {
   slots,
   tabOwners,
   type LyricLine,
+  type Slot,
 } from '@qtdn/chordpro';
 import { Stack, router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
@@ -46,7 +47,11 @@ import { color, space } from '@/ui/tokens';
  * vocabulary, so a malformed chord symbol cannot be produced here at all.
  */
 export default function ComposeScreen() {
-  const { id, folder } = useLocalSearchParams<{ id: string; folder?: string }>();
+  const { id, folder, new: isNew } = useLocalSearchParams<{
+    id: string;
+    folder?: string;
+    new?: string;
+  }>();
   const [history, setHistory] = useState<History<string[]> | null>(null);
   const lines = history?.present ?? null;
   const [editing, setEditing] = useState<number | null>(null);
@@ -129,6 +134,15 @@ export default function ComposeScreen() {
       // The buffer is the file now, so leaving is not discarding anything. Without this
       // the guard fired on the way out of a successful save.
       setHistory(begin(lines));
+
+      // A new note is created straight into this editor, so there is no note screen
+      // behind it — going back landed on the library, and the chart you had just written
+      // was something you then had to go and find. Replacing puts it on screen and
+      // leaves the library one step back, where it belongs.
+      if (isNew === '1') {
+        router.replace(`/note/${id}${folder === undefined ? '' : `?folder=${encodeURIComponent(folder)}`}`);
+        return;
+      }
       router.back();
     } catch (cause) {
       // Never navigate away from work that was not written. The buffer is still here.
@@ -206,6 +220,7 @@ export default function ComposeScreen() {
         <View style={styles.tools}>
           <Button
             label="Add line"
+            compact
             onPress={() => {
               const at = appendPoint(lines ?? []);
               edit((current) => [...current.slice(0, at), '', ...current.slice(at)]);
@@ -215,6 +230,7 @@ export default function ComposeScreen() {
           />
           <Button
             label="Add tab"
+            compact
             onPress={() => {
               void openTab();
             }}
@@ -222,6 +238,7 @@ export default function ComposeScreen() {
           />
           <Button
             label="Add section"
+            compact
             onPress={() => {
               setSectioning(true);
             }}
@@ -277,7 +294,7 @@ export default function ComposeScreen() {
         title="Line"
         // Says which line it will act on. It used to say only "Line", so a mis-aimed
         // long press could delete a verse with nothing on screen naming the target.
-        subtitle={menu === null ? undefined : (plainText(lines?.[menu] ?? '') || 'blank line')}
+        subtitle={menu === null ? undefined : describeLine(lines?.[menu] ?? '')}
         options={[
           { key: 'edit', label: 'Edit text' },
           { key: 'above', label: 'Insert line above' },
@@ -437,11 +454,17 @@ function Line({
                 unusual enough that silently showing one of them reads as a bug. */}
             {slot.chords.length > 1 ? slot.chords.join(' ') : (slot.chord ?? ' ')}
           </Text>
-          {/* An empty gap has nothing to show, so it renders a thin rule to stay
-              tappable. A gap that already holds a chord does not: the chord is the
-              target, and a rule under it is just noise. */}
-          {slot.kind === 'gap' && slot.text.trim() === '' ? (
-            slot.chord === null ? <View style={styles.gap} /> : null
+          {/*
+            A gap with nothing in it renders a thin rule so it can still be aimed at.
+            But *one* space is the join between two words, not a bar you would put a
+            chord in — ruling those turned an ordinary lyric into
+            `Vou — voltar — sei — que — ainda`, which reads as punctuation the song does
+            not have. A run of two or more spaces is deliberate, and keeps its rule.
+
+            A gap already holding a chord shows the chord: a rule under it is noise.
+          */}
+          {isBar(slot) ? (
+            <View style={styles.gap} />
           ) : (
             <Text variant="lyric">{slot.text}</Text>
           )}
@@ -475,6 +498,31 @@ function isLyric(source: string): boolean {
 
 function sameLines(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((line, index) => line === b[index]);
+}
+
+/**
+ * What to call this line in the menu that is about to change it.
+ *
+ * Trimmed before the fallback: a chord-only line like `[Am7]  [D7(b9)]` has plain text
+ * that is all whitespace, which is truthy — so the sheet showed a subtitle made of
+ * spaces and the menu went back to naming nothing.
+ */
+function describeLine(source: string): string {
+  const words = plainText(source).trim();
+  if (words !== '') return words;
+
+  const node = parse(source).chart.nodes[0];
+  if (node !== undefined && node.kind === 'lyric') {
+    const chords = node.segments.flatMap((segment) => (segment.chord === null ? [] : [segment.chord]));
+    if (chords.length > 0) return chords.join(' ');
+  }
+
+  return source.trim() === '' ? 'blank line' : source.trim();
+}
+
+/** Whether a slot is an empty bar worth marking, rather than the space between words. */
+function isBar(slot: Slot): boolean {
+  return slot.kind === 'gap' && slot.chord === null && (slot.text === '' || slot.text.length > 1);
 }
 
 /** Whether this line opens a block, so deleting it takes the block with it. */

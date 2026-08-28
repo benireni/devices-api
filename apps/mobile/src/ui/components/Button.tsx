@@ -12,6 +12,8 @@ export interface ButtonProps {
   variant?: 'primary' | 'secondary' | 'danger';
   /** A toggle that is currently on. Reads as the identity fill, and announces itself. */
   selected?: boolean;
+  /** Tighter side padding, for three or more buttons sharing a row. */
+  compact?: boolean;
   disabled?: boolean;
   style?: Pick<ViewStyle, 'marginTop' | 'marginBottom' | 'alignSelf' | 'flex'>;
 }
@@ -22,6 +24,7 @@ export function Button({
   onPress,
   variant = 'secondary',
   selected = false,
+  compact = false,
   disabled = false,
   style,
 }: ButtonProps) {
@@ -34,6 +37,7 @@ export function Button({
       onPress={onPress}
       style={({ pressed }) => [
         styles.base,
+        compact && styles.compact,
         styles[selected ? 'primary' : variant],
         pressed && styles.pressed,
         disabled && styles.disabled,
@@ -62,6 +66,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // `space.lg` either side leaves about 48pt for a label in a three-way split at 393pt,
+  // which is where "Add section" broke across two lines.
+  compact: { paddingHorizontal: space.sm },
   primary: { backgroundColor: color.accent },
   secondary: { borderWidth: 1, borderColor: color.border },
   danger: { borderWidth: 1, borderColor: color.danger },

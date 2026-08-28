@@ -145,11 +145,28 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
           ))}
         </Row>
 
+        <Row label="Seventh">
+          {SEVENTHS.map((seventh) => (
+            <Chip
+              key={seventh || 'none'}
+              label={seventh === '' ? '—' : seventh}
+              selected={seventh === spec.seventh}
+              disabled={locked || !options.sevenths.includes(seventh)}
+              onPress={() => {
+                patch({ seventh });
+              }}
+            />
+          ))}
+        </Row>
+
         {/*
-          Bass sits high because a slash chord is ordinary in this repertoire — `Dm7/C`
-          and `Dm/C#` are both in the demo library — while suspensions and tensions are
-          refinements. Row order here is presentation only; `buildChord` assembles the
-          symbol in the written order regardless.
+          Ordered by how often a hand reaches for it: quality and seventh are on nearly
+          every chord, a slash bass is ordinary in this repertoire, suspensions and
+          tensions are refinements. Row order here is presentation only — `buildChord`
+          assembles the symbol in the written order regardless.
+
+          Bass was briefly second, which put seventeen note chips between Quality and
+          Seventh and pushed the most-used row of the sheet below the fold.
         */}
         <Row label="Bass">
           <Chip
@@ -168,20 +185,6 @@ export function ChordPicker({ visible, word, current, onSelect, onDismiss }: Cho
               disabled={locked}
               onPress={() => {
                 patch({ bass: note });
-              }}
-            />
-          ))}
-        </Row>
-
-        <Row label="Seventh">
-          {SEVENTHS.map((seventh) => (
-            <Chip
-              key={seventh || 'none'}
-              label={seventh === '' ? '—' : seventh}
-              selected={seventh === spec.seventh}
-              disabled={locked || !options.sevenths.includes(seventh)}
-              onPress={() => {
-                patch({ seventh });
               }}
             />
           ))}
