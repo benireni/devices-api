@@ -159,6 +159,20 @@ function matchBackward(lines: readonly string[], from: number, section: string):
  * The end of the last open block, not the end of the file. Appending blindly put the
  * line after `{end_of_verse}` — outside the section the note was created with — and
  * `moveLine` refuses to cross a fence, so it could never be moved back in.
+ *
+ * A tab block is not a block a line may be added to, and the first version of this could
+ * not tell: `{end_of_tab}` closes a section named `tab`, so it looked exactly like the
+ * `{end_of_verse}` case and a new line landed between the last string and the fence. The
+ * grid editor appends new tabs at the end of the file, so "Add tab" then "Add line" was
+ * the everyday path into it — and the result was unrecoverable from this screen, because
+ * the block then had seven rows, the grid refused to open it, the words rendered as a
+ * seventh string while playing, and a row inside a tab carries no long-press to delete
+ * it with.
+ *
+ * So the search restarts above the tab rather than stepping around its fence, which puts
+ * the line in the last section that was open before the tab began. Asking whether the
+ * destination is inside a tab, rather than whether the line before it closes one, is also
+ * what makes this hold for a tab that was never closed.
  */
 export function appendPoint(lines: readonly string[]): number {
   // Walked as values rather than indices: an indexed read here needs a fallback that
@@ -174,8 +188,15 @@ export function appendPoint(lines: readonly string[]): number {
 
   const name = directiveName(previous);
   const closes = name === null ? null : sectionEndName(name);
+  const point = closes === null ? lines.length : index - 1;
 
-  return closes === null ? lines.length : index - 1;
+  const owners = tabOwners(lines);
+  // A line inserted at `point` falls inside a tab when the line it displaces does, and
+  // at the end of the file when the file itself ends inside one that was never closed.
+  const fence =
+    owners[point] ?? (point === lines.length ? (owners[lines.length - 1] ?? null) : null);
+
+  return fence === null ? point : appendPoint(lines.slice(0, fence));
 }
 
 /**

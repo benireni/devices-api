@@ -131,7 +131,11 @@ test.describe('the tab grid', () => {
 
     // Hand-written tab uses every spacing convention there is. Reflowing it into this
     // grid would destroy the alignment its author relied on.
-    await expect(app.text('This tab was not written by the grid editor. Editing it here would change its spacing, so it stays in the raw editor.')).toBeVisible();
+    await expect(
+      app.text(
+        'This tab was not written by the grid editor. Editing it here would change its spacing, so it stays in the raw editor.',
+      ),
+    ).toBeVisible();
     await expect(app.button('Save')).toBeDisabled();
     await expect(app.button('Undo')).toBeDisabled();
   });
@@ -144,3 +148,31 @@ function gridRow(app: { page: Page }) {
     .filter({ visible: true })
     .first();
 }
+
+test.describe('a tab and a lyric in the same note', () => {
+  test('adds a new line above the tab, not inside it', async ({ app }) => {
+    await app.open();
+    await app.tapRow('Repertório');
+    await app.tapRow('Corcovado');
+    await app.noteAction('Edit');
+
+    // The grid appends a new tab at the end of the file, so this is the everyday order.
+    await app.tap('Add tab');
+    await app.tap('Save');
+
+    await app.tap('Add line');
+    await app.field('Lyrics').fill('depois do solo');
+    await app.tap('Done');
+    await app.tap('Save');
+
+    // Read from the source, because on the chart both placements put the same words on
+    // the screen — what differs is which side of `{start_of_tab}` they fall on. The line
+    // used to land between the last string and `{end_of_tab}`: a seventh row the grid
+    // then refused to open, rendered as a string while playing, and with no long-press
+    // to delete it, so the raw editor was the only way back.
+    await app.noteAction('Source');
+    const source = await app.field('{title: …}').inputValue();
+    expect(source).toContain('depois do solo');
+    expect(source.indexOf('depois do solo')).toBeLessThan(source.indexOf('{start_of_tab}'));
+  });
+});

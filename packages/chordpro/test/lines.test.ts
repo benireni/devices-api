@@ -100,12 +100,7 @@ describe('removeLine', () => {
       'after',
     ];
     expect(removeLine(lines, 0)).toEqual(['after']);
-    expect(removeLine(lines, 2)).toEqual([
-      '{start_of_verse}',
-      'outer',
-      '{end_of_verse}',
-      'after',
-    ]);
+    expect(removeLine(lines, 2)).toEqual(['{start_of_verse}', 'outer', '{end_of_verse}', 'after']);
   });
 
   it('removes only the fence when its partner is missing', () => {
@@ -201,6 +196,32 @@ describe('appendPoint', () => {
 
   it('appends at the end when the last block is still open', () => {
     expect(appendPoint(['{start_of_verse}', 'a'])).toBe(2);
+  });
+
+  it('puts the line above a trailing tab, not inside it', () => {
+    // `{end_of_tab}` closes a section named `tab`, so it used to look exactly like
+    // `{end_of_verse}` and the line landed between the last string and the fence — a
+    // seventh row the grid editor then refused to open and compose could not delete.
+    const lines = [
+      '{start_of_verse}',
+      'Olha que coisa',
+      '{end_of_verse}',
+      '{start_of_tab}',
+      'e|--0--|',
+      '{end_of_tab}',
+    ];
+
+    expect(appendPoint(lines)).toBe(2);
+  });
+
+  it('holds for a tab that was never closed', () => {
+    expect(
+      appendPoint(['{start_of_verse}', 'a', '{end_of_verse}', '{start_of_tab}', 'e|-0-|']),
+    ).toBe(2);
+  });
+
+  it('falls back to the end when a tab is all there is', () => {
+    expect(appendPoint(['{start_of_tab}', 'e|--0--|', '{end_of_tab}'])).toBe(0);
   });
 });
 
