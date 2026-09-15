@@ -28,24 +28,36 @@ export function isEscapable(character: string): boolean {
   return ESCAPABLE.has(character);
 }
 
-/**
- * Escapes lyric text for writing into a chart.
- *
- * `atLineStart` is true only for text that begins its line, because `#` and `{` are
- * inert anywhere else and escaping them would be noise in the file.
- */
-export function escapeLyricText(text: string, atLineStart: boolean): string {
+/** Escapes what carries meaning anywhere on a line: a chord bracket, and the escape. */
+export function escapeLyricText(text: string): string {
   let out = '';
-
-  for (let index = 0; index < text.length; index += 1) {
-    const character = text.charAt(index);
-    const carriesMeaning = character === '[' || character === '\\';
-    // `#` and `{` are inert anywhere but the first column, and escaping them elsewhere
-    // would be noise in a file people are meant to be able to read.
-    const opensTheLine = index === 0 && atLineStart && (character === '#' || character === '{');
-
-    out += carriesMeaning || opensTheLine ? `\\${character}` : character;
+  for (const character of text) {
+    out += character === '[' || character === '\\' ? `\\${character}` : character;
   }
-
   return out;
+}
+
+/**
+ * Escapes a `#` or `{` that would make the whole assembled line something other than a
+ * lyric.
+ *
+ * This runs on the finished line rather than on each segment, because what makes those
+ * two characters dangerous is what comes *before* them, and a segment cannot see that.
+ * The first attempt escaped only at column zero and was defeated by a single leading
+ * space, since `parseDirective` trims before it tests — so `  {refrão 2x}` was still read
+ * back as a directive and ` {start_of_chorus}` still restructured the document.
+ *
+ * Both characters are escaped at the first non-blank column even though only `{` is
+ * reached through a trim today. The parser's two rules disagree about leading whitespace,
+ * a writer has no way to know which is which, and matching the stricter of them costs one
+ * backslash in a file.
+ *
+ * Neither character can come from anywhere but lyric text — a chord contributes `[`, `]`
+ * and its own symbol — so the first non-blank character being one of them is unambiguous.
+ */
+export function escapeLineStart(line: string): string {
+  const at = line.search(/\S/);
+  const character = line.charAt(at);
+  if (at === -1 || (character !== '#' && character !== '{')) return line;
+  return `${line.slice(0, at)}\\${line.slice(at)}`;
 }
