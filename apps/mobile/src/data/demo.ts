@@ -62,13 +62,27 @@ export async function seedDemoLibrary(library: Library): Promise<void> {
     '[Cm7(b9)]  [F7(#11)]  [Bb7M(13)]',
     '{end_of_verse}',
     '',
+    // One column, three characters a cell: the shape the grid editor writes, so tapping
+    // it opens the grid. The seed used to be five characters wide, which the grid refuses
+    // — the shipped library's only tab was one the app's own tab editor could not open.
     '{start_of_tab: Voicing de Dm7(9) sem tônica}',
-    'e|--5--|',
-    'B|--5--|',
-    'G|--5--|',
-    'D|--5--|',
-    'A|-----|',
-    'E|-----|',
+    'e|-5-|',
+    'B|-5-|',
+    'G|-5-|',
+    'D|-5-|',
+    'A|---|',
+    'E|---|',
+    '{end_of_tab}',
+    '',
+    // And one the grid deliberately cannot open: spacing a person chose by eye, of the
+    // kind you get pasting a tab off the web. Editing it here would reflow it.
+    '{start_of_tab: Levada da introdução, como veio da internet}',
+    'e|-----------------|',
+    'B|---1-----1---1---|',
+    'G|--2---2-----2----|',
+    'D|-0-----0---0-----|',
+    'A|-----------------|',
+    'E|-----------------|',
     '{end_of_tab}',
   ]);
 

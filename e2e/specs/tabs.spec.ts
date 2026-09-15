@@ -127,10 +127,11 @@ test.describe('the tab grid', () => {
     await app.tapRow('Estudos');
     await app.tapRow('Acordes de passagem');
     await app.noteAction('Edit');
-    await app.tapText('{start_of_tab: Voicing de Dm7(9) sem tônica} — tap to edit');
+    await app.tapText('{start_of_tab: Levada da introdução, como veio da internet} — tap to edit');
 
-    // Hand-written tab uses every spacing convention there is. Reflowing it into this
-    // grid would destroy the alignment its author relied on.
+    // A tab seeded specifically to be foreign. This test used to point at the library's
+    // only tab, which was *accidentally* unopenable — so the fixture and the defect were
+    // the same thing, and fixing one would have silently gutted the other.
     await expect(
       app.text(
         'This tab was not written by the grid editor. Editing it here would change its spacing, so it stays in the raw editor.',

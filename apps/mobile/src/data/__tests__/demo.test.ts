@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { chordsUsed, isExactlyEditable, parse } from '@qtdn/chordpro';
+import { chordsUsed, isExactlyEditable, parse, parseTabGrid } from '@qtdn/chordpro';
 
 import { MemoryFileStore } from '../adapters/memoryFileStore';
 import { seedDemoLibrary } from '../demo';
@@ -71,5 +71,29 @@ describe('seedDemoLibrary', () => {
     }
 
     expect(offenders).toEqual([]);
+  });
+
+  it('seeds a tab the grid editor can open, and one it deliberately cannot', async () => {
+    const library = new Library(new MemoryFileStore(), deterministicEnvironment(), '/notes');
+    await seedDemoLibrary(library);
+
+    const { notes } = await library.snapshot();
+    const blocks: { label: string | null; opens: boolean }[] = [];
+    for (const note of notes) {
+      const { source } = await library.readNote(note.id, note.folder);
+      for (const node of parse(source).chart.nodes) {
+        if (node.kind === 'tab') blocks.push({ label: node.label, opens: parseTabGrid(node.lines) !== null });
+      }
+    }
+
+    // The library's only tab used to be five characters a cell where the grid writes
+    // three, so the shipped shop window was a tab the app's own editor refused — and the
+    // end-to-end test for "leaves tab it did not write alone" had quietly adopted that
+    // accident as its fixture. Both are pinned here now, so fixing one cannot gut the
+    // other.
+    expect(blocks.filter((block) => block.opens)).toHaveLength(1);
+    expect(blocks.filter((block) => !block.opens).map((block) => block.label)).toEqual([
+      'Levada da introdução, como veio da internet',
+    ]);
   });
 });
