@@ -31,28 +31,71 @@ agent dies, which is what happened here.
 
 ## Status
 
-| # | Finding | Sev | Kind | Status |
-|---|---|---|---|---|
-| NF-1 | Latency fence arithmetically cannot fail on a quadratic scan | High | defect | OPEN |
-| NF-2 | One unreadable file makes the whole library invisible, forever, silently | High | defect | OPEN |
-| NF-3 | Opening one note costs a full library scan | High | defect | OPEN |
-| NF-4 | No fence varies chart size, so "parse must stay linear" is unguarded | Med | defect | OPEN |
-| NF-5 | `app.crashed` is written to a buffer the crash destroys | Med | defect | OPEN |
-| NF-6 | 4.37 MB of unused fonts ship in the bundle | Med | defect | OPEN |
-| NF-7 | Reading screen's saves are fire-and-forget, unlogged | Med | risk | OPEN |
-| NF-8 | `e2e/server.mjs` serves the filesystem on every interface | Low | defect | OPEN |
-| NF-9 | e2e flakiness reports itself as an app error | Low | risk | OPEN |
-| NF-10 | Scans issue two strictly sequential store calls per note | Med | risk | OPEN |
-| NF-11 | Dependency audit cannot fail | Low | risk | OPEN |
-| NF-12 | Non-UUID `.chordpro` file lists but cannot open | Low | defect | OPEN |
-| NF-13 | Compose re-renders whole chart on every chord tap | Low | risk (unmeasured) | OPEN |
-| NF-14 | `snapshot()` counts folder membership in O(folders x notes) | Low | preference | OPEN |
-| FN-1 | Lyric text containing `[`, `#` or `{` is reinterpreted as syntax | Critical | defect | **FIXED** `a435323` |
-| FN-2 | Round-trip generator excludes the characters that break the round trip | High | defect | **FIXED** `a435323` |
-| FN-3 | A newline pasted into a title truncates the directive | Low | defect | OPEN |
-| LT-1 | eslint did not ignore what playwright writes into the tree | Low | defect | **FIXED** `a50141a` |
+All four reviewers completed. Their own reports are in `docs/reviews/round-4/`; this table
+is the working state. Fixed rows name the commit.
 
-Agent 1 (UI/UX) and agent 4 (smells) produced no surviving findings before dying.
+### Fixed
+
+| # | Finding | Sev | Commit |
+|---|---|---|---|
+| FN-1 | Lyric text carrying `[`, `#` or `{` is reinterpreted as syntax | Critical | `a435323` |
+| FN-2 | Round-trip generator excluded the characters that broke the round trip | High | `a435323` |
+| FN-6 | The escape was defeated by one leading space | High | `c877d36`, `155dba5` |
+| FN-8 | "Add line" wrote a lyric inside a tab block | High | `22913ed` |
+| NF-2 | One unreadable file made the whole library invisible | High | `fc16973` |
+| NF-12 | Non-UUID `.chordpro` file listed but could not open | Low | `fc16973` |
+| UX-14 | A failed scan rendered as "No notes yet" (regression from NF-2) | Medium | `480040f` |
+| LT-1 | eslint did not ignore what playwright writes into the tree | Low | `a50141a` |
+
+### Open, ordered by what I would do next
+
+| # | Finding | Sev | Kind |
+|---|---|---|---|
+| UX-2 | Chord slots as narrow as 16pt, in the app's primary gesture | High | defect |
+| UX-6 | The only tab in the shipped library cannot be opened by the tab editor | High | defect |
+| NF-1 | Latency fence arithmetically cannot fail on a quadratic scan | High | defect |
+| NF-3 | Opening one note costs a full library scan | High | defect |
+| SM-14 | A speed tap rewrites the whole note through the parser | Medium | defect |
+| SM-12 | Tab editor records undo steps for edits that change nothing | Medium | defect |
+| SM-10 | A folder name is logged, four lines below the comment forbidding it | Medium | defect |
+| SM-5, SM-9, NF-7 | Unguarded `void` saves: four sites, no catch, no log | Medium | defect |
+| UX-17 | Moving a note drops you where it no longer is, with no word | Medium | defect |
+| UX-18 | The picker displays a chord that does not exist | Medium | defect |
+| UX-3, UX-8 | The structured editor shows raw ChordPro, including on a new note | Medium | defect |
+| UX-1 | Nut bar drawn above the ×/○ row, reads as an underline | Medium | defect |
+| UX-7 | The playing screen breaks at accessibility text sizes | Medium | defect |
+| UX-10 | Nothing says whether a note has unsaved edits | Medium | defect |
+| UX-12 | "Clear" wipes the log with no confirmation | Medium | defect |
+| UX-19 | Structure rows invisible to VoiceOver; line menu long-press only | Medium | defect |
+| UX-15 | Gallery and VISUAL-LANGUAGE.md have drifted from `tokens.ts` | Medium | defect |
+| NF-4 | No fence varies chart size | Medium | defect |
+| NF-5 | `app.crashed` written to a buffer the crash destroys | Medium | defect |
+| NF-6 | 4.37 MB of unused fonts ship | Medium | defect |
+| NF-10 | Scans issue two strictly sequential store calls per note | Medium | risk |
+| FN-4 | `DESIGN.md` specifies the picker in English convention | Medium | defect (doc) |
+| UX-4, UX-5, UX-9, UX-11, UX-13, UX-16 | See agent 1's report | Low–Med | mixed |
+| SM-1..SM-9, SM-11, SM-13 | See agent 4's report | Low–Med | mixed |
+| NF-8, NF-9, NF-11, NF-13, NF-14 | See agent 3's section below | Low–Med | mixed |
+| FN-5, FN-9, FN-10 | See agent 2's report | Low | mixed |
+
+### Adjudicated
+
+- **SM-10 beats NF's negative result.** Agent 3 reported "No PII in any log call site";
+  agent 4 found `folder/[name].tsx:39` logging `{ from: name }`, four lines below a
+  comment reading *"Folder names are song and album names. never log content."* The
+  `cause` logged beside it carries the new name too, in the message
+  `A folder named "X" already exists.` Read the code: agent 4 is right, and agent 3's
+  negative is withdrawn. Still open.
+- **FN-7 is canonicalization, not a defect.** A whitespace-only lyric line round-trips to
+  `blank`. That is what it looks like on a chart, `arbitraries.ts` already documents
+  generating canonical ASTs, and nothing is lost: clearing a line's text is meant to give
+  you a blank line. The generator keeps requiring one non-blank character, and now allows
+  an indent — which is what exposed FN-6. Closed, no change.
+- **UX-6 and SM-13 are the same finding** from two directions: the one tab in the demo
+  library is 5 characters wide, `tab.ts:72` requires a multiple of 3, so the grid editor
+  refuses its own shop window — and `tabs.spec.ts:125` turned that accident into a
+  fixture named "leaves tab it did not write alone". Fix the seed, keep a deliberately
+  foreign tab for that test.
 
 ## Agent 3 — non-functional. Complete.
 
@@ -181,78 +224,3 @@ Auto-scroll is well built for battery and `useKeepAwake` is a correct single-own
 Coverage is honestly 100% with every exclusion justified and nothing exempt by omission.
 `packages/chordpro` is genuinely pure. No PII in any log call site.
 
-## Agent 2 — functional. Died mid-reproduction.
-
-### FN-1 Lyric text carrying ChordPro metacharacters is silently reinterpreted · Critical · defect
-Agent 2's hypothesis, verified. Lyric text typed through the structured editor reaches
-`serialize` unescaped (`serialize.ts:37-42` writes `segment.text` verbatim), and
-`setText` (`edit.ts:161`) does not sanitize. Probe, editing a chordless lyric line and
-reparsing what was written:
-
-```
-typed "Olha [bis] que coisa"  -> lyric segments [[null,"Olha "],["bis"," que coisa"]]
-typed "#1 hit do verao"       -> COMMENT text="1 hit do verao"
-typed "{refrao 2x}"           -> directive refrao 2x=null
-typed "na praia} do sol"      -> lyric (unaffected)
-```
-
-Three distinct losses, all reachable from Edit text on any line:
-- `[bis]` becomes a **chord**. `bis` is a repeat marker in everyday Brazilian cifras, so
-  this is not an exotic input — the word leaves the lyric and appears as a chord symbol.
-- A line starting `#` becomes a **comment**, and `ChartView.tsx:28-30` does not render
-  comments while playing. The line the writer typed **disappears from the chart.**
-- A line starting `{` becomes a **directive**, likewise not rendered. `{refrao 2x}` is a
-  plausible thing to type.
-
-The string round-trip stays stable — `serialize(parse(s)) === s` — which is why no
-existing test notices. It is the *AST* round-trip that breaks, and it breaks in the
-direction that loses the writer's words.
-
-### FN-2 The round-trip generator excludes the characters that break the round trip · High · defect
-`test/arbitraries.ts:55`:
-```ts
-const LYRIC_CHARS = Array.from("abcdefghijklmnopqrstuvwxyzáéíóúãõç ,.!?'-");
-```
-No `[`, no `#`, no `{`. The property at `roundtrip.test.ts:16-24` is the gate the root
-`CLAUDE.md` calls "the invariant everything else depends on", and its generator cannot
-produce the input that violates it.
-
-The same file already records learning this exact lesson once, at `arbitraries.ts:58-61`,
-about `{` in directive values: *"It used to be left out, and leaving it out is what let
-the round-trip property pass over a tab line that could close its own fence — the
-generator was shaped around the defect."* The lyric generator still has the identical
-blind spot. FN-1 is what that blind spot was hiding.
-
-### FN-3 A newline in a title truncates the directive · Low · defect
-Probe of `setDirective` + round-trip over titles: `}`, `{` and `:` all survive; a value
-containing a newline writes `{title: Linha` and the directive is gone on reread. Not
-typeable into a single-line field, but reachable by pasting.
-
-## Landed so far
-
-- `a50141a` — eslint now ignores `e2e/playwright-report/` and `e2e/test-results/`, which
-  `.gitignore` already covered. `npm run check` broke locally after `npm run e2e` and
-  never in CI, where the checkout is fresh.
-- `a435323` — FN-1 and FN-2. `escape.ts`, with `serialize` escaping and `parse` reading
-  the escape back, and `LYRIC_CHARS` widened to `[ ] { } # \`. The widened generator
-  immediately found a case my first attempt got wrong: a segment ending in a backslash
-  followed by a chord wrote `[A]\[A]`, read back as a literal bracket. Writing now always
-  doubles a backslash; reading only treats one as an escape when what follows is
-  escapable, so a chart pasted from elsewhere still reads as the words it shows.
-- Four e2e tests in `editing.spec.ts`. **Three were verified to fail without the fix** by
-  neutering `escapeLyricText` and re-running. The fourth passes either way and is labelled
-  as such in the file: it guards the fix's own failure mode — the escape reaching the
-  screen — which did not exist before.
-
-Suite after: 383 unit tests, 100% coverage held, 91 e2e passing.
-
-## Notes against agent 3's report
-
-- **NF-9 did not reproduce.** A full e2e run here was 91/91 clean, where agent 3 saw 14
-  `ERR_CONNECTION_REFUSED` failures. That does not refute the finding — the missing
-  `error` handler in `e2e/server.mjs` is real code, and agent 3 watched the server die
-  once — but the flake is intermittent, so a fix must be judged on the code rather than on
-  reproducing the symptom.
-- **Running e2e here needs `CHROMIUM_PATH`.** The pinned playwright wants build 1234;
-  this container has 1194. `CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome`
-  is what makes `npx playwright test` work, and `npm run e2e` alone does not.

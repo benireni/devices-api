@@ -1,8 +1,17 @@
 # Round 4 — Agent 1 — UI/UX review
 
-status: in progress
+status: complete
 HEAD at start: 2653a26 (branch claude/qtdn-design-planning-sdhse4)
 date: 2026-09-15
+
+Screenshots and driver scripts cited below live in this session's scratchpad:
+`/tmp/claude-0/-home-user-devices-api/8969ce88-37de-5b42-8c7f-fee65144d9e2/scratchpad/`
+(`shots/*.png`, `t*.mjs`). They are session-local; every finding also cites `file:line`
+and says how to reproduce it, so nothing depends on them surviving.
+
+Method: built the web export at the reviewed commit, served it, and drove it with
+Playwright at iPhone 13 metrics in dark mode — screenshotting each screen and dumping the
+accessibility tree and the measured box of every control.
 
 Findings are appended as they are confirmed. "checked and sound" lines record
 things ruled out. "hypothesis, unverified" records leads stopped mid-flight.
@@ -682,3 +691,131 @@ lives on the Compose footer, behind dismissing the sheet. A `Cancel` that restor
 editor.
 
 ---
+## UX-19 · The structured editor's structure rows are invisible to the accessibility tree, and the line menu is unreachable without a long press · Medium · defect
+
+Measured on the running build (`t23.mjs`), Compose on `Acordes de passagem`: 45 elements
+carry `role="button"`, and **none** of them is a structure line or the tab row. The tab
+fence — the only route from Compose into the tab editor — renders as
+
+```
+<div tabindex="0">{start_of_tab: Voicing de Dm7(9) sem tônica} — tap to edit</div>
+```
+
+with no `role` and no `aria-label`. Same for `{title:}`, `{start_of_verse: …}`,
+`{end_of_verse}` and the tab body rows.
+
+Source: `compose/[id].tsx:414-422` (`isTabStart` branch), `:430-440` (metadata branch) and
+`:398-406` (tab body) are `Pressable`s with no `accessibilityRole` and no
+`accessibilityLabel`. Contrast `:444-459`, where every chord slot has both and the label is
+genuinely good — "`F7M over Olha`", "`No chord over this beat`". The care was spent on the
+slots and not on their neighbours.
+
+Two consequences on device:
+
+1. VoiceOver focuses these rows (RN's `Pressable` sets `accessible`) but announces them as
+   text, with no "button" trait and no hint, so the tab editor has no discoverable entry.
+2. The line menu — `Edit text`, `Insert above/below`, `Move up/down`, `Delete` — is bound to
+   `onLongPress` only, everywhere (`:416`, `:434`, `:443`, `:457`). VoiceOver does not
+   deliver a long press from its own rotor, so for a VoiceOver user **there is no way at
+   all to delete a line, move a line, or rename a section** without going to the raw editor.
+   `ChartView`'s read-only surface is fine; it is the editor that closes.
+
+Fix: `accessibilityRole="button"` plus a real label on all three branches
+(`Tab: Voicing de Dm7(9) sem tônica. Opens the grid editor`, `Section: Diminutos entre
+graus`), and add `accessibilityActions={[{name: 'longpress'}]}` with an
+`onAccessibilityAction` that opens the line menu — RN maps that to VoiceOver's actions
+rotor, which is the standard remedy for a long-press-only affordance.
+
+This also pairs with UX-4: a long press that VoiceOver cannot reach is a long press most
+sighted users have not found either.
+
+---
+
+## Proposals — tests that would have caught these
+
+Everything above was found by looking at the running app. That is the pattern: three rounds
+of review and a 100%-covered domain core, and what survives is what no assertion reads. The
+suite in `e2e/` is well built and its `support/app.ts` is genuinely good; what it lacks is
+any assertion about *geometry, appearance or completeness*.
+
+Five specs I would add, in the order I would add them:
+
+1. **Touch-target fence** (catches UX-2, and stops it recurring).
+   One spec walking `getByRole('button')` on Compose, the reading screen, the tab editor,
+   the picker and `/gallery`, asserting `width >= 44 && height >= 44` on every visible one,
+   with no allow-list. `e2e/CLAUDE.md` rule 1 already says "if a flow cannot be performed
+   through the UI, that is a finding"; this is the same rule applied to reachability.
+
+2. **Open every seeded tab** (catches UX-6).
+   `tabs.spec.ts` builds its grids from scratch, so no test has ever opened a tab that
+   existed before the test did. Iterate the demo library, open each `{start_of_tab}` row,
+   assert the grid renders and `This tab was not written by the grid editor` is absent.
+
+3. **Token and component completeness** (catches UX-15).
+   A unit test, not an e2e one: assert `TYPE_VARIANTS` in `gallery.tsx` equals
+   `Object.keys(typography)` and `COLOR_ROLES` covers `Object.keys(color)`. Better still,
+   derive them and delete the possibility. A second test asserting every file in
+   `ui/components/` is exported from `index.ts` *and* mentioned in `gallery.tsx` would
+   close the other half.
+
+4. **A scaled-type project** (catches UX-7a mechanically).
+   A second Playwright project that injects a font-size multiplier and re-runs the reading
+   and compose specs, with one added assertion: `ScrollControl`'s scrollWidth does not
+   exceed its clientWidth, and no two visible controls' boxes intersect. That single
+   assertion is the whole of the `Play`-button failure.
+
+5. **A screenshot baseline for the chord strip** (catches UX-1, and the class it belongs
+   to). `docs/CLAUDE.md` already says `images/` holds screenshots "rendered from the real
+   app… Regenerate them when the component set changes visibly". There is no chord-diagram
+   image in it. One `ChordStrip` screenshot per open shape and per barre shape, compared on
+   CI, would have failed the day the nut bar landed above the markers — and every future
+   diagram change becomes a picture someone looks at.
+
+## Proposals — enrichment, in priority order
+
+1. **Diminished and augmented shapes** (UX-5). Completes D10 on the repertoire the product
+   documentation is built around.
+2. **Human-readable structure rows in Compose** (UX-3, UX-8). The largest single
+   improvement to what the primary editor communicates, and the one that makes the app's
+   own claim — "you should not have to go to raw mode" — true.
+3. **A saved/unsaved indicator** (UX-10) and **replace-on-move** (UX-17). Both small, both
+   about the user always being able to answer "did that work, and where am I".
+4. **`Add line` in the chrome** (UX-9). The difference between writing a song and scrolling
+   to the bottom of one.
+5. **Level filter and local timestamps on the log screen** (UX-16.6, UX-16.7). Cheap, and
+   the screen exists precisely for the moment when you are not at a laptop.
+
+## Scope challenges — none
+
+Nothing above requires transposition, capo, key, tempo, sync, accounts, Android or a web
+client. UX-5 (diminished shapes) is the only item that adds capability rather than
+correcting something, and it sits inside D10's "chord diagrams", which is a shipped v1
+feature rather than a new one. If the adjudication is that D10 is closed, the fallback is
+UX-5's second half alone: say *why* there is no shape.
+
+## Not findings, checked
+
+- `useDiscardGuard` is correct and covers the header chevron, the edge-swipe and `Close`
+  alike. Driven: placing a chord then pressing `Close` gives "Discard changes? This note
+  goes back to the last time it was saved." (`scratchpad/shots/29-discard.png`).
+- The chord builder's undo granularity is right: `building` (`ChordPicker`/`compose`)
+  collapses `D` → `Dm` → `Dm7` into one undo step, so undo removes the chord rather than
+  walking back through it.
+- Delete confirmations name what will be lost, including the folder's note count, and both
+  put `Cancel` left of the destructive action.
+- Search is debounced, cancels stale results, respects the persisted sort order, and has an
+  empty state that quotes the query back.
+- `ChartView` and the reading screen show no editing affordances, as `DESIGN.md` §6.4
+  requires; the `Actions` control is in the header and does not travel with the scroll.
+- `Text.tsx:24` gives `title` and `heading` the `header` role, so sheets and screens have
+  heading navigation.
+- Auto-scroll restarts from the top when played at the end of a song, stops at the end, and
+  releases the wake lock; `Awake` is independent of playback and not persisted, as designed.
+- `ScrollControl` disables `Play` correctly when the chart fits the screen — though it says
+  nothing about why, which is the one thing I would add (a `caption` reading `Fits the
+  screen` beside the readout).
+
+## status: complete
+
+HEAD at finish: `b32c3de`. UX-1, UX-2 and UX-6 re-verified against that commit after the
+parallel fixes landed; all three still live.
