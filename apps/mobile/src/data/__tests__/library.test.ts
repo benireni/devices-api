@@ -248,4 +248,69 @@ describe('Library', () => {
     const id = await library.createNote(null, 'Song');
     expect((await library.readNote(id, null)).source).toContain(`{x_qtdn_id: ${id}}`);
   });
+
+  describe('a folder it cannot fully read', () => {
+    it('lists the healthy notes when one file will not read', async () => {
+      const good = await library.createNote(null, 'Corcovado');
+      const bad = await library.createNote(null, 'Wave');
+
+      const read = files.read.bind(files);
+      files.read = async (path: string) => {
+        if (path.includes(bad)) throw new Error('EPERM: file is not readable');
+        return read(path);
+      };
+
+      // One unreadable neighbour used to reject out of the scan, which left the library
+      // screen loading forever and every healthy note unreachable.
+      const { notes } = await library.snapshot();
+      expect(notes.map((note) => note.id)).toEqual([good]);
+    });
+
+    it('survives a note deleted between the listing and the read', async () => {
+      const staying = await library.createNote(null, 'Corcovado');
+      const going = await library.createNote(null, 'Wave');
+
+      const listFiles = files.listFiles.bind(files);
+      files.listFiles = async (dir: string) => {
+        const names = await listFiles(dir);
+        await library.deleteNote(going, null);
+        return names;
+      };
+
+      const { notes } = await library.snapshot();
+      expect(notes.map((note) => note.id)).toEqual([staying]);
+    });
+
+    it('skips a note file whose name is not a note id', async () => {
+      await library.createNote(null, 'Corcovado');
+      // What copying an exported note back into the folder would produce: the export
+      // names files after the song, and `notePath` refuses any id that is not a uuid.
+      await files.write(`${ROOT}/wave.chordpro`, '{title: Wave}');
+
+      const { notes } = await library.snapshot();
+      expect(notes.map((note) => note.title)).toEqual(['Corcovado']);
+    });
+
+    it('skips a foreign file inside a folder too', async () => {
+      await library.createFolder('Repertório');
+      await library.createNote('Repertório', 'Corcovado');
+      await files.write(`${ROOT}/Repertório/wave.chordpro`, '{title: Wave}');
+
+      const { notes } = await library.snapshot();
+      expect(notes.map((note) => note.title)).toEqual(['Corcovado']);
+    });
+
+    it('finds the healthy notes when a search hits an unreadable file', async () => {
+      const good = await library.createNote(null, 'Corcovado');
+      const bad = await library.createNote(null, 'Corcovado II');
+
+      const read = files.read.bind(files);
+      files.read = async (path: string) => {
+        if (path.includes(bad)) throw new Error('EPERM: file is not readable');
+        return read(path);
+      };
+
+      expect((await library.search('corcovado')).map((note) => note.id)).toEqual([good]);
+    });
+  });
 });

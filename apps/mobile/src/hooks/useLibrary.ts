@@ -28,22 +28,31 @@ export function useLibrary() {
   const [order, setOrderState] = useState<NoteOrder>(DEFAULT_ORDER);
 
   const reload = useCallback(async () => {
-    await libraryReady;
     const started = Date.now();
-    const [next, preferences] = await Promise.all([library.snapshot(), settings.read()]);
+    try {
+      await libraryReady;
+      const [next, preferences] = await Promise.all([library.snapshot(), settings.read()]);
 
-    // The trigger metric for everything this app defers. `data/CLAUDE.md` says SQLite
-    // arrives "when a scan is measurably slow on a real device" — which nothing could
-    // establish, because nothing was ever timed on one.
-    log.info('library.scanned', {
-      ms: Date.now() - started,
-      notes: next.notes.length,
-      folders: next.folders.length,
-    });
+      // The trigger metric for everything this app defers. `data/CLAUDE.md` says SQLite
+      // arrives "when a scan is measurably slow on a real device" — which nothing could
+      // establish, because nothing was ever timed on one.
+      log.info('library.scanned', {
+        ms: Date.now() - started,
+        notes: next.notes.length,
+        folders: next.folders.length,
+      });
 
-    setSnapshot(next);
-    setOrderState(preferences.order);
-    setLoading(false);
+      setSnapshot(next);
+      setOrderState(preferences.order);
+    } catch (cause) {
+      // `Library` already skips a note it cannot read, so reaching here means the scan
+      // itself failed — the directory is gone, or storage is refusing. Whatever the
+      // reason, the screen has to stop saying "loading" and start saying something, and
+      // the log has to carry the reason, because the screen cannot.
+      log.error('library.scan.failed', cause);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   /** Persisted, because a sort order that resets every launch is worse than none. */

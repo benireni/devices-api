@@ -222,6 +222,23 @@ export class Library {
     await this.files.remove(this.folderPath(name));
   }
 
+  /**
+   * Lists the notes in one folder, skipping anything it could not serve.
+   *
+   * A scan used to be all-or-nothing: one file that would not read — an OS eviction, a
+   * note deleted by another screen between the listing and the read — rejected out of
+   * `snapshot`, through `useLibrary.reload`, which left `loading` true forever. The
+   * library then rendered neither the list nor the empty state, so a single bad file
+   * turned every other note on disk into a blank screen, silently, on every focus.
+   *
+   * Skipping is the right reading because the filesystem is the model: the healthy files
+   * are still the truth, and one unreadable neighbour says nothing about them. The skip
+   * is logged, because a note missing from its folder is exactly what someone would open
+   * the log viewer to explain.
+   *
+   * A file whose name is not a note id is skipped for the same reason. It would otherwise
+   * list with its real title and fail on every tap, because `notePath` refuses the id.
+   */
   private async readFolder(folder: string | null): Promise<Entry[]> {
     const dir = folder === null ? this.root : this.folderPath(folder);
     const names = await this.files.listFiles(dir);
@@ -229,15 +246,29 @@ export class Library {
     const entries: Entry[] = [];
     for (const name of names.filter((n) => n.endsWith(EXTENSION)).sort()) {
       const id = name.slice(0, -EXTENSION.length);
-      const path = `${dir}/${name}`;
-      const { chart } = parse(await this.files.read(path));
+      if (!isNoteId(id)) {
+        log.warn('note.skipped.foreign', { folder: folder === null ? 'root' : 'filed' });
+        continue;
+      }
 
-      entries.push({
-        summary: { ...summarize(id, folder, chart), updatedAt: await this.files.modifiedAt(path) },
-        chart,
-      });
+      const path = `${dir}/${name}`;
+      const entry = await this.readEntry(id, folder, path);
+      if (entry !== null) entries.push(entry);
     }
     return entries;
+  }
+
+  private async readEntry(id: string, folder: string | null, path: string): Promise<Entry | null> {
+    try {
+      const { chart } = parse(await this.files.read(path));
+      return {
+        summary: { ...summarize(id, folder, chart), updatedAt: await this.files.modifiedAt(path) },
+        chart,
+      };
+    } catch (cause) {
+      log.error('note.read.skipped', cause, { id });
+      return null;
+    }
   }
 
   private async ensureFolder(folder: string | null): Promise<void> {
