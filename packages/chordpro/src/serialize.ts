@@ -1,6 +1,6 @@
 import type { Chart, Node } from './ast';
 import { TAB_SECTION, endDirective, isTabEnd, startDirective } from './directives';
-import { escapeLyricText } from './escape';
+import { escapeLineStart, escapeLyricText } from './escape';
 
 /**
  * Render a {@link Chart} back to ChordPro source.
@@ -42,9 +42,9 @@ function writeNode(node: Node, out: string[]): void {
       let line = '';
       for (const segment of node.segments) {
         if (segment.chord !== null) line += `[${segment.chord}]`;
-        line += escapeLyricText(segment.text, line === '');
+        line += escapeLyricText(segment.text);
       }
-      out.push(line);
+      out.push(escapeLineStart(line));
       return;
     }
 

@@ -81,10 +81,25 @@ const chord = fc
 
 const lyricText = fc.string({ unit: fc.constantFrom(...LYRIC_CHARS), maxLength: 24 });
 
-/** Text guaranteed to survive the parser's blank-line check. */
+/**
+ * Text guaranteed to survive the parser's blank-line check.
+ *
+ * Indented, sometimes. Requiring the first character to be non-blank is what hid the
+ * second half of the escaping defect: `parseDirective` trims before it tests, so
+ * `  {refrão 2x}` was still read back as a directive long after `{refrão 2x}` was fixed,
+ * and no generated line could ever begin with a space to show it.
+ *
+ * A line still has to contain something. Whitespace-only lyric text is not canonical —
+ * the parser reads a line of spaces as `blank`, which is what it looks like on a chart —
+ * so the non-blank character stays required.
+ */
 const nonBlankLyricText = fc
-  .tuple(fc.constantFrom(...LYRIC_CHARS.filter((c) => c !== ' ')), lyricText)
-  .map(([first, rest]) => first + rest);
+  .tuple(
+    fc.string({ unit: fc.constant(' '), maxLength: 2 }),
+    fc.constantFrom(...LYRIC_CHARS.filter((c) => c !== ' ')),
+    lyricText,
+  )
+  .map(([indent, first, rest]) => indent + first + rest);
 
 const chordSegment: fc.Arbitrary<Segment> = fc
   .tuple(chord, lyricText)

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { escapeLyricText, isEscapable } from '../src/escape';
+import { escapeLineStart, escapeLyricText, isEscapable } from '../src/escape';
 import { parse, serialize } from '../src/index';
 
 /** The chart as a reader sees it: one string per lyric line, chords in brackets. */
@@ -19,20 +19,36 @@ describe('isEscapable', () => {
 
 describe('escapeLyricText', () => {
   it('escapes a bracket wherever it appears', () => {
-    expect(escapeLyricText('Olha [bis] que', false)).toBe('Olha \\[bis] que');
+    expect(escapeLyricText('Olha [bis] que')).toBe('Olha \\[bis] que');
   });
 
-  it('escapes a leading # or { only at the start of a line', () => {
-    expect(escapeLyricText('#1 hit', true)).toBe('\\#1 hit');
-    expect(escapeLyricText('{refrão 2x}', true)).toBe('\\{refrão 2x}');
-    expect(escapeLyricText('#1 hit', false)).toBe('#1 hit');
-    expect(escapeLyricText('nota #1 e {a}', true)).toBe('nota #1 e {a}');
+  it('leaves # and { alone, because only their column makes them dangerous', () => {
+    expect(escapeLyricText('nota #1 e {a}')).toBe('nota #1 e {a}');
   });
 
   it('always doubles a backslash, because the next segment is what follows it', () => {
-    expect(escapeLyricText('a\\[b', false)).toBe('a\\\\\\[b');
-    expect(escapeLyricText('a\\b', false)).toBe('a\\\\b');
-    expect(escapeLyricText('termina com\\', false)).toBe('termina com\\\\');
+    expect(escapeLyricText('a\\[b')).toBe('a\\\\\\[b');
+    expect(escapeLyricText('a\\b')).toBe('a\\\\b');
+    expect(escapeLyricText('termina com\\')).toBe('termina com\\\\');
+  });
+});
+
+describe('escapeLineStart', () => {
+  it('escapes a # or { in the first non-blank column', () => {
+    expect(escapeLineStart('#1 hit')).toBe('\\#1 hit');
+    expect(escapeLineStart('{refrão 2x}')).toBe('\\{refrão 2x}');
+  });
+
+  it('escapes them past an indent, because the directive test trims first', () => {
+    expect(escapeLineStart('  {refrão 2x}')).toBe('  \\{refrão 2x}');
+    expect(escapeLineStart(' #1 hit')).toBe(' \\#1 hit');
+  });
+
+  it('leaves a line that starts with anything else', () => {
+    expect(escapeLineStart('[G7]#1 e {a}')).toBe('[G7]#1 e {a}');
+    expect(escapeLineStart('Olha que coisa')).toBe('Olha que coisa');
+    expect(escapeLineStart('   ')).toBe('   ');
+    expect(escapeLineStart('')).toBe('');
   });
 });
 
@@ -83,6 +99,13 @@ describe('lyric text that looks like syntax', () => {
     } as const;
     const written = serialize({ nodes: [line] });
     expect(written).toBe('[A]\\\\[A]');
+    expect(parse(written).chart.nodes[0]).toEqual(line);
+  });
+
+  it('keeps an indented lyric that looks like a directive', () => {
+    const line = { kind: 'lyric', segments: [{ chord: null, text: '  {refrão 2x}' }] } as const;
+    const written = serialize({ nodes: [line] });
+    expect(written).toBe('  \\{refrão 2x}');
     expect(parse(written).chart.nodes[0]).toEqual(line);
   });
 
