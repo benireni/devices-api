@@ -22,7 +22,7 @@ import { space } from '@/ui/tokens';
 const SEARCH_DEBOUNCE_MS = 200;
 
 export default function LibraryScreen() {
-  const { snapshot, notes, order, setOrder, loading, reload } = useLibrary();
+  const { snapshot, notes, order, setOrder, loading, failed, reload } = useLibrary();
   const [ordering, setOrdering] = useState(false);
   const [naming, setNaming] = useState(false);
   const [query, setQuery] = useState('');
@@ -146,6 +146,12 @@ export default function LibraryScreen() {
             ))}
           </ScrollView>
         )
+      ) : failed ? (
+        // Not "No notes yet": the notes are on disk and the app could not read them.
+        <EmptyState
+          title="Couldn’t read your library"
+          hint="Your notes are still on this phone. Pull the screen away and back to try again, and check the log for what went wrong."
+        />
       ) : isEmpty && !loading ? (
         <EmptyState title="No notes yet" hint="Start a note, or make a folder to group them." />
       ) : (

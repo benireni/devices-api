@@ -25,6 +25,15 @@ const EMPTY: LibrarySnapshot = { folders: [], notes: [] };
 export function useLibrary() {
   const [snapshot, setSnapshot] = useState<LibrarySnapshot>(EMPTY);
   const [loading, setLoading] = useState(true);
+  /**
+   * Whether the last scan failed, kept apart from an empty result.
+   *
+   * They are the same shape and opposite news: an empty library invites you to start a
+   * note, and a library that would not read is telling you your notes are still there
+   * and it cannot reach them. Saying "No notes yet" to the second is the worst available
+   * answer.
+   */
+  const [failed, setFailed] = useState(false);
   const [order, setOrderState] = useState<NoteOrder>(DEFAULT_ORDER);
 
   const reload = useCallback(async () => {
@@ -44,12 +53,14 @@ export function useLibrary() {
 
       setSnapshot(next);
       setOrderState(preferences.order);
+      setFailed(false);
     } catch (cause) {
       // `Library` already skips a note it cannot read, so reaching here means the scan
       // itself failed — the directory is gone, or storage is refusing. Whatever the
       // reason, the screen has to stop saying "loading" and start saying something, and
       // the log has to carry the reason, because the screen cannot.
       log.error('library.scan.failed', cause);
+      setFailed(true);
     } finally {
       setLoading(false);
     }
@@ -69,5 +80,5 @@ export function useLibrary() {
 
   const notes = useMemo(() => sortNotes(snapshot.notes, order), [snapshot.notes, order]);
 
-  return { snapshot, notes, order, setOrder, loading, reload };
+  return { snapshot, notes, order, setOrder, loading, failed, reload };
 }
