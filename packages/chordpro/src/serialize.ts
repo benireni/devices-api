@@ -1,5 +1,6 @@
 import type { Chart, Node } from './ast';
 import { TAB_SECTION, endDirective, isTabEnd, startDirective } from './directives';
+import { escapeLyricText } from './escape';
 
 /**
  * Render a {@link Chart} back to ChordPro source.
@@ -34,13 +35,18 @@ function writeNode(node: Node, out: string[]): void {
       out.push(directiveLine(node.name, node.value));
       return;
 
-    case 'lyric':
-      out.push(
-        node.segments
-          .map((segment) => (segment.chord === null ? segment.text : `[${segment.chord}]${segment.text}`))
-          .join(''),
-      );
+    case 'lyric': {
+      // `[` anywhere, and a leading `#` or `{`, would read back as syntax rather than as
+      // the words someone typed — see `escape.ts`. Only the first segment can begin the
+      // line, and only when it carries no chord of its own.
+      let line = '';
+      for (const segment of node.segments) {
+        if (segment.chord !== null) line += `[${segment.chord}]`;
+        line += escapeLyricText(segment.text, line === '');
+      }
+      out.push(line);
       return;
+    }
 
     case 'tab':
       // A tab line holding its own closing fence would reparse as an empty block plus

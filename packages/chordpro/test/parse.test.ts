@@ -66,13 +66,22 @@ describe('parse', () => {
     expect(chart.nodes.map((n) => n.kind)).toEqual(['lyric', 'blank', 'lyric']);
   });
 
-  it('treats an unclosed bracket as literal text and reports it', () => {
+  it('treats an unclosed bracket as literal text, reports it, and repairs it on write', () => {
     const { chart, diagnostics } = parse('quase [G');
 
     expect(diagnostics).toEqual([
       { line: 1, code: 'unclosed-chord', message: 'Chord bracket is never closed.' },
     ]);
-    expect(serialize(chart)).toBe('quase [G');
+
+    // Writing it back escapes the bracket. The words do not change, but the file stops
+    // being malformed — saving a note used to preserve the byte and the complaint with
+    // it, so the same diagnostic came back on every read for the life of the note.
+    const written = serialize(chart);
+    expect(written).toBe('quase \\[G');
+
+    const reread = parse(written);
+    expect(reread.diagnostics).toEqual([]);
+    expect(reread.chart).toEqual(chart);
   });
 
   it('reports an unclosed section but keeps the content', () => {

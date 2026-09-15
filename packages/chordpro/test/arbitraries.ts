@@ -52,7 +52,13 @@ const QUALITIES = [
   '+',
 ];
 
-const LYRIC_CHARS = Array.from('abcdefghijklmnopqrstuvwxyzáéíóúãõç ,.!?\'-');
+// `[`, `#`, `{` and `\\` included deliberately, for the same reason `{` was added to
+// directive values below: leaving them out is what let the round-trip property pass over
+// a lyric that could not survive it. `[bis]` typed as a lyric came back as a chord, and a
+// line beginning `#` or `{` came back as a comment or a directive — neither of which the
+// chart renders, so the words left the screen. `serialize` escapes them now, and a
+// generator that cannot produce them proves nothing about that.
+const LYRIC_CHARS = Array.from("abcdefghijklmnopqrstuvwxyzáéíóúãõç ,.!?'-[]{}#\\");
 const NAME_CHARS = Array.from('abcdefghijklmnopqrstuvwxyz_');
 const VALUE_CHARS = Array.from('abcdefghijklmnopqrstuvwxyz0123456789 -:.');
 // `{` included deliberately. It used to be left out, and leaving it out is what let the

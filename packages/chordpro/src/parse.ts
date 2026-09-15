@@ -7,6 +7,7 @@ import type {
   Segment,
 } from './ast';
 import { TAB_SECTION, sectionEndName, sectionStartName } from './directives';
+import { isEscapable } from './escape';
 
 /**
  * Parse ChordPro source into a {@link Chart}.
@@ -168,37 +169,56 @@ class Parser {
   private parseLyric(raw: string, lineNo: number): LyricLine {
     const segments: Segment[] = [];
     let chord: string | null = null;
+    let text = '';
     let cursor = 0;
 
-    for (;;) {
-      const open = raw.indexOf('[', cursor);
+    while (cursor < raw.length) {
+      const character = raw.charAt(cursor);
 
-      if (open === -1) {
-        const text = raw.slice(cursor);
-        // At least one segment always results: this runs only for non-blank lines, so
-        // if no chord has been seen yet the whole line is still sitting in `text`.
-        if (text !== '' || chord !== null) {
-          segments.push({ chord, text });
+      if (character === '\\') {
+        // A backslash escapes the character after it, and is otherwise ordinary text —
+        // so a chart written elsewhere, where a backslash means nothing in particular,
+        // reads back exactly as it was written.
+        const next = raw.charAt(cursor + 1);
+        if (next !== '' && isEscapable(next)) {
+          text += next;
+          cursor += 2;
+          continue;
         }
-        return { kind: 'lyric', segments };
+        text += character;
+        cursor += 1;
+        continue;
       }
 
-      const close = raw.indexOf(']', open + 1);
+      if (character !== '[') {
+        text += character;
+        cursor += 1;
+        continue;
+      }
+
+      const close = raw.indexOf(']', cursor + 1);
       if (close === -1) {
-        // No closing bracket: the rest of the line is literal text, which is both the
-        // forgiving reading and the one that survives a round trip unchanged.
+        // No closing bracket: the rest of the line is literal text, which is the
+        // forgiving reading.
         this.report(lineNo, 'unclosed-chord', 'Chord bracket is never closed.');
-        segments.push({ chord, text: raw.slice(cursor) });
-        return { kind: 'lyric', segments };
+        text += raw.slice(cursor);
+        break;
       }
 
-      const text = raw.slice(cursor, open);
       if (text !== '' || chord !== null) {
         segments.push({ chord, text });
       }
-      chord = raw.slice(open + 1, close);
+      chord = raw.slice(cursor + 1, close);
+      text = '';
       cursor = close + 1;
     }
+
+    // At least one segment always results: this runs only for non-blank lines, so if no
+    // chord has been seen yet the whole line is still sitting in `text`.
+    if (text !== '' || chord !== null) {
+      segments.push({ chord, text });
+    }
+    return { kind: 'lyric', segments };
   }
 
   private emit(node: Node): void {
