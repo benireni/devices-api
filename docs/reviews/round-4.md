@@ -47,7 +47,9 @@ agent dies, which is what happened here.
 | NF-12 | Non-UUID `.chordpro` file lists but cannot open | Low | defect | OPEN |
 | NF-13 | Compose re-renders whole chart on every chord tap | Low | risk (unmeasured) | OPEN |
 | NF-14 | `snapshot()` counts folder membership in O(folders x notes) | Low | preference | OPEN |
-| FN-1 | Lyric text containing `[`, `#` or `{` is reinterpreted as syntax | ? | ? | UNVERIFIED |
+| FN-1 | Lyric text containing `[`, `#` or `{` is reinterpreted as syntax | Critical | defect | CONFIRMED, fixing |
+| FN-2 | Round-trip generator excludes the characters that break the round trip | High | defect | CONFIRMED, fixing with FN-1 |
+| FN-3 | A newline pasted into a title truncates the directive | Low | defect | OPEN |
 
 Agent 1 (UI/UX) and agent 4 (smells) produced no surviving findings before dying.
 
@@ -180,10 +182,47 @@ Coverage is honestly 100% with every exclusion justified and nothing exempt by o
 
 ## Agent 2 — functional. Died mid-reproduction.
 
-### FN-1 Lyric text containing ChordPro metacharacters · UNVERIFIED
-Agent 2's last action was writing a UI reproduction, preserved in the scratchpad. The
-hypothesis: lyric text typed through the editor is written into the file unescaped, so
-`Olha [bis] que coisa` becomes a chord, a lyric starting `#` becomes a comment, and
-`{refrao 2x}` becomes a directive — each vanishing from or changing the rendered chart.
-If true this is a round-trip violation reachable from the app's own UI, which rule 2 in
-the root `CLAUDE.md` puts in the highest category. **Verify before anything else.**
+### FN-1 Lyric text carrying ChordPro metacharacters is silently reinterpreted · Critical · defect
+Agent 2's hypothesis, verified. Lyric text typed through the structured editor reaches
+`serialize` unescaped (`serialize.ts:37-42` writes `segment.text` verbatim), and
+`setText` (`edit.ts:161`) does not sanitize. Probe, editing a chordless lyric line and
+reparsing what was written:
+
+```
+typed "Olha [bis] que coisa"  -> lyric segments [[null,"Olha "],["bis"," que coisa"]]
+typed "#1 hit do verao"       -> COMMENT text="1 hit do verao"
+typed "{refrao 2x}"           -> directive refrao 2x=null
+typed "na praia} do sol"      -> lyric (unaffected)
+```
+
+Three distinct losses, all reachable from Edit text on any line:
+- `[bis]` becomes a **chord**. `bis` is a repeat marker in everyday Brazilian cifras, so
+  this is not an exotic input — the word leaves the lyric and appears as a chord symbol.
+- A line starting `#` becomes a **comment**, and `ChartView.tsx:28-30` does not render
+  comments while playing. The line the writer typed **disappears from the chart.**
+- A line starting `{` becomes a **directive**, likewise not rendered. `{refrao 2x}` is a
+  plausible thing to type.
+
+The string round-trip stays stable — `serialize(parse(s)) === s` — which is why no
+existing test notices. It is the *AST* round-trip that breaks, and it breaks in the
+direction that loses the writer's words.
+
+### FN-2 The round-trip generator excludes the characters that break the round trip · High · defect
+`test/arbitraries.ts:55`:
+```ts
+const LYRIC_CHARS = Array.from("abcdefghijklmnopqrstuvwxyzáéíóúãõç ,.!?'-");
+```
+No `[`, no `#`, no `{`. The property at `roundtrip.test.ts:16-24` is the gate the root
+`CLAUDE.md` calls "the invariant everything else depends on", and its generator cannot
+produce the input that violates it.
+
+The same file already records learning this exact lesson once, at `arbitraries.ts:58-61`,
+about `{` in directive values: *"It used to be left out, and leaving it out is what let
+the round-trip property pass over a tab line that could close its own fence — the
+generator was shaped around the defect."* The lyric generator still has the identical
+blind spot. FN-1 is what that blind spot was hiding.
+
+### FN-3 A newline in a title truncates the directive · Low · defect
+Probe of `setDirective` + round-trip over titles: `}`, `{` and `:` all survive; a value
+containing a newline writes `{title: Linha` and the directive is gone on reread. Not
+typeable into a single-line field, but reachable by pasting.
