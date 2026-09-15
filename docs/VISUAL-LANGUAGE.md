@@ -124,7 +124,20 @@ distinction visible. It also gives chord glyphs predictable width above a lyric.
 
 **Radii**: `sm 6` (chips, cells) · `md 10` (buttons, fields) · `lg 16` (sheet top corners)
 
-**Minimum touch target: 44pt**, per Apple's HIG. Every pressable in the app meets it.
+**Minimum touch target: 44pt**, per Apple's HIG. Every pressable in the app meets it,
+with one exception that is worth stating rather than leaving to be rediscovered.
+
+A chord slot in the structured editor is as wide as the word it sits over. "e" and "a" are
+words, and no amount of padding makes them 44pt without spacing the words of a lyric apart
+from each other — at which point the line stops reading as a line, which is the thing the
+editor exists to show you. Measured on an iPhone 13 with the demo library: 42 slots, the
+narrowest 20.4pt, 29 of them under 44.
+
+So the slot meets the floor on the axis where it can. It is 44pt tall with 8pt of vertical
+`hitSlop` on top of that, and it carries the full gap after its word. It gets no horizontal
+`hitSlop`, because slots sit flush against each other and any horizontal reach would
+overlap the neighbour — trading a target that is too small for one that writes the chord
+over the wrong syllable, which is the worse failure of the two because it is silent.
 
 Borders are `1px` or `StyleSheet.hairlineWidth`. Nothing heavier.
 

@@ -34,7 +34,7 @@ import {
   Text,
   TextField,
 } from '@/ui/components';
-import { color, space } from '@/ui/tokens';
+import { HIT_SLOP, color, space } from '@/ui/tokens';
 
 /**
  * The structured editor.
@@ -455,6 +455,7 @@ function Line({
           // gesture — so without this, a long press anywhere on the line opened the chord
           // picker and the line menu was unreachable.
           onLongPress={onEdit}
+          hitSlop={SLOT_SLOP}
           style={styles.slot}
         >
           <Text variant="chord" tone="chord">
@@ -538,6 +539,18 @@ function opensBlock(lines: string[], index: number): boolean {
   return isFence(lines[index] ?? '');
 }
 
+/**
+ * How far a chord slot's target reaches past its word.
+ *
+ * Vertical only. There is nothing above or below a slot but the line's own margin, so
+ * reaching into it is free — but slots sit flush against each other horizontally, and the
+ * gap after a word already belongs to that word's target. Any horizontal slop would
+ * therefore overlap the neighbour, trading a target that is too small for one that writes
+ * the chord over the wrong syllable. That is the worse failure, because it is silent: a
+ * missed tap is obvious and a misplaced chord is not.
+ */
+const SLOT_SLOP = { top: space.sm, bottom: space.sm, left: 0, right: 0 } as const;
+
 /** An empty line still offers one slot, so a chord can be placed before any lyric. */
 const EMPTY_LINE: LyricLine = { kind: 'lyric', segments: [{ chord: null, text: '' }] };
 
@@ -571,7 +584,12 @@ const styles = StyleSheet.create({
   tabRow: { paddingVertical: space.xs },
   tabBody: { paddingVertical: 0 },
   line: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: space.sm },
-  slot: { flexDirection: 'column', paddingRight: space.sm, minHeight: 44 },
+  // As wide as its word plus the gap after it, which for "e" or "a" is nowhere near the
+  // 44pt floor every other control meets, and cannot be: a width floor would space the
+  // words of a lyric apart from each other and stop the line reading as a line. The gap
+  // is as wide as it can be without that, and the height meets the floor on its own.
+  // The exception is written down in VISUAL-LANGUAGE.md rather than left to be rediscovered.
+  slot: { flexDirection: 'column', paddingRight: space.md, minHeight: HIT_SLOP },
   gap: {
     minWidth: 18,
     height: 2,
