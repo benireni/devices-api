@@ -17,7 +17,21 @@ const PLATFORM_IMPORTS = ['react', 'react-dom', 'react-native', 'expo', 'expo-*'
 const COLOR_LITERAL = String.raw`/^(#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})|(?:rgb|rgba|hsl|hsla)\(.*)$/`;
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/dist-web/**', '**/node_modules/**', '**/coverage/**', '**/.expo/**'] },
+  // Kept in step with `.gitignore`: these are build output. Playwright writes its report
+  // and traces into the tree on every local run, and linting a bundled trace viewer fails
+  // on files no tsconfig owns — so `npm run check` broke after `npm run e2e`, but never in
+  // CI, where the checkout is fresh and the directories do not exist.
+  {
+    ignores: [
+      '**/dist/**',
+      '**/dist-web/**',
+      '**/node_modules/**',
+      '**/coverage/**',
+      '**/.expo/**',
+      'e2e/playwright-report/**',
+      'e2e/test-results/**',
+    ],
+  },
 
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
