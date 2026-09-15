@@ -47,9 +47,10 @@ agent dies, which is what happened here.
 | NF-12 | Non-UUID `.chordpro` file lists but cannot open | Low | defect | OPEN |
 | NF-13 | Compose re-renders whole chart on every chord tap | Low | risk (unmeasured) | OPEN |
 | NF-14 | `snapshot()` counts folder membership in O(folders x notes) | Low | preference | OPEN |
-| FN-1 | Lyric text containing `[`, `#` or `{` is reinterpreted as syntax | Critical | defect | CONFIRMED, fixing |
-| FN-2 | Round-trip generator excludes the characters that break the round trip | High | defect | CONFIRMED, fixing with FN-1 |
+| FN-1 | Lyric text containing `[`, `#` or `{` is reinterpreted as syntax | Critical | defect | **FIXED** `a435323` |
+| FN-2 | Round-trip generator excludes the characters that break the round trip | High | defect | **FIXED** `a435323` |
 | FN-3 | A newline pasted into a title truncates the directive | Low | defect | OPEN |
+| LT-1 | eslint did not ignore what playwright writes into the tree | Low | defect | **FIXED** `a50141a` |
 
 Agent 1 (UI/UX) and agent 4 (smells) produced no surviving findings before dying.
 
@@ -226,3 +227,32 @@ blind spot. FN-1 is what that blind spot was hiding.
 Probe of `setDirective` + round-trip over titles: `}`, `{` and `:` all survive; a value
 containing a newline writes `{title: Linha` and the directive is gone on reread. Not
 typeable into a single-line field, but reachable by pasting.
+
+## Landed so far
+
+- `a50141a` — eslint now ignores `e2e/playwright-report/` and `e2e/test-results/`, which
+  `.gitignore` already covered. `npm run check` broke locally after `npm run e2e` and
+  never in CI, where the checkout is fresh.
+- `a435323` — FN-1 and FN-2. `escape.ts`, with `serialize` escaping and `parse` reading
+  the escape back, and `LYRIC_CHARS` widened to `[ ] { } # \`. The widened generator
+  immediately found a case my first attempt got wrong: a segment ending in a backslash
+  followed by a chord wrote `[A]\[A]`, read back as a literal bracket. Writing now always
+  doubles a backslash; reading only treats one as an escape when what follows is
+  escapable, so a chart pasted from elsewhere still reads as the words it shows.
+- Four e2e tests in `editing.spec.ts`. **Three were verified to fail without the fix** by
+  neutering `escapeLyricText` and re-running. The fourth passes either way and is labelled
+  as such in the file: it guards the fix's own failure mode — the escape reaching the
+  screen — which did not exist before.
+
+Suite after: 383 unit tests, 100% coverage held, 91 e2e passing.
+
+## Notes against agent 3's report
+
+- **NF-9 did not reproduce.** A full e2e run here was 91/91 clean, where agent 3 saw 14
+  `ERR_CONNECTION_REFUSED` failures. That does not refute the finding — the missing
+  `error` handler in `e2e/server.mjs` is real code, and agent 3 watched the server die
+  once — but the flake is intermittent, so a fix must be judged on the code rather than on
+  reproducing the symptom.
+- **Running e2e here needs `CHROMIUM_PATH`.** The pinned playwright wants build 1234;
+  this container has 1194. `CHROMIUM_PATH=/opt/pw-browsers/chromium-1194/chrome-linux/chrome`
+  is what makes `npx playwright test` work, and `npm run e2e` alone does not.

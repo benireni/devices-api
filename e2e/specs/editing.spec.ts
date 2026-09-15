@@ -354,3 +354,62 @@ async function top(target: Locator): Promise<number> {
   expect(box, 'the line is on screen').not.toBeNull();
   return box?.y ?? Number.NaN;
 }
+
+test.describe('lyrics that look like ChordPro syntax', () => {
+  test.beforeEach(async ({ app }) => {
+    await app.open();
+    await app.tapRow('Repertório');
+    await app.tapRow('Garota de Ipanema');
+    await app.noteAction('Edit');
+    await expect(app.button('Add line')).toBeVisible();
+  });
+
+  test('keeps a bracketed repeat marker as a word, not a chord', async ({ app }) => {
+    await app.longPress(app.text('coisa'));
+    await app.tapInSheet('Edit text');
+    await app.field('Lyrics').fill('Olha que coisa [bis]');
+    await app.tap('Done');
+    await app.tap('Save');
+
+    // `bis` used to be read back as a chord, so the word left the lyric and appeared
+    // above it. It is a repeat marker, and it belongs in the line.
+    await expect(app.text('Olha que coisa [bis]')).toBeVisible();
+  });
+
+  test('keeps a line that begins with # on the chart', async ({ app }) => {
+    await app.tap('Add line');
+    await app.field('Lyrics').fill('#1 do verão');
+    await app.tap('Done');
+    await app.tap('Save');
+
+    // It used to become a comment, and the chart does not render comments — so the line
+    // vanished, with the raw editor the only way to find out where it went.
+    await expect(app.text('#1 do verão')).toBeVisible();
+  });
+
+  test('keeps a line that begins with { on the chart', async ({ app }) => {
+    await app.tap('Add line');
+    await app.field('Lyrics').fill('{refrão 2x}');
+    await app.tap('Done');
+    await app.tap('Save');
+
+    await expect(app.text('{refrão 2x}')).toBeVisible();
+  });
+
+  test('survives the round trip back into the editor', async ({ app }) => {
+    await app.tap('Add line');
+    await app.field('Lyrics').fill('{refrão 2x}');
+    await app.tap('Done');
+    await app.tap('Save');
+
+    // This one does not catch the original defect — before the escape existed there was
+    // nothing to leak, and it passed. It guards the fix's own failure mode: the escape
+    // belongs in the file and must never reach the screen, so if the editor ever starts
+    // handing back raw source this says so.
+    await app.noteAction('Edit');
+    await expect(app.button('Add line')).toBeVisible();
+    await app.longPress(app.text('{refrão 2x}'));
+    await app.tapInSheet('Edit text');
+    await expect(app.field('Lyrics')).toHaveValue('{refrão 2x}');
+  });
+});
